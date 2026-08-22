@@ -1,0 +1,3612 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Choicer Voicer — Doppia i tuoi video</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0c0a08;
+    --stage:#141110;
+    --panel:#1b1714;
+    --panel-2:#211c18;
+    --amber:#f0b429;
+    --amber-deep:#c98f16;
+    --coral:#e35d4f;
+    --teal:#2bb3a3;
+    --paper:#f5efe2;
+    --dim:#9c9187;
+    --line:#3a332c;
+    --display: 'Archivo Black', Inter, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+    --body: 'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--ink);color:var(--paper);font-family:var(--body);height:100%;overflow:hidden;}
+  ::selection{background:var(--amber);color:var(--ink);}
+  a{color:inherit;}
+  button{font-family:var(--body);cursor:pointer;}
+  button:disabled{cursor:not-allowed;opacity:.4;}
+  :focus-visible{outline:2px solid var(--teal);outline-offset:2px;}
+
+  #app{position:relative;height:100vh;overflow:hidden;}
+
+  /* ---------- shared bits ---------- */
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink);background:var(--coral);
+    padding:5px 10px;border:1px solid var(--paper);
+  }
+  .bars{display:inline-flex;align-items:flex-end;gap:2px;height:10px;}
+  .bars i{display:block;width:2px;background:var(--teal);animation:bounce 1.1s ease-in-out infinite;}
+  .bars i:nth-child(1){height:4px;animation-delay:0s;}
+  .bars i:nth-child(2){height:9px;animation-delay:.15s;}
+  .bars i:nth-child(3){height:6px;animation-delay:.3s;}
+  .bars i:nth-child(4){height:10px;animation-delay:.45s;}
+  @keyframes bounce{0%,100%{transform:scaleY(.4);}50%{transform:scaleY(1);}}
+
+  .btn{
+    font-family:var(--display);font-size:15px;letter-spacing:.02em;
+    padding:14px 22px;border:2px solid var(--ink);
+    background:var(--amber);color:var(--ink);
+    box-shadow:5px 5px 0 var(--coral);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .btn:hover:not(:disabled){transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--coral);}
+  .btn:active:not(:disabled){transform:translate(0,0);box-shadow:2px 2px 0 var(--coral);}
+  .btn.ghost{background:transparent;color:var(--paper);border-color:var(--line);box-shadow:none;}
+  .btn.ghost:hover:not(:disabled){border-color:var(--paper);transform:none;box-shadow:none;}
+  .btn.teal{background:var(--teal);box-shadow:5px 5px 0 var(--amber);}
+  .btn.teal:hover:not(:disabled){box-shadow:7px 7px 0 var(--amber);}
+  .btn.coral{background:var(--coral);color:var(--paper);box-shadow:5px 5px 0 var(--teal);}
+  .btn.rec{background:var(--coral);color:var(--paper);box-shadow:5px 5px 0 var(--ink);}
+  .btn.rec.active{animation:pulse 1s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{box-shadow:5px 5px 0 var(--ink);}50%{box-shadow:5px 5px 0 var(--amber);}}
+  .btn small{display:block;font-family:var(--mono);font-size:10px;font-weight:400;text-transform:none;letter-spacing:.02em;opacity:.75;margin-top:3px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);}
+
+  /* ---------- screen scaffolding ---------- */
+  .screen{display:none;height:100vh;padding:clamp(14px,3vw,28px);overflow:hidden;}
+  .screen.active{display:flex;flex-direction:column;}
+  .wrap{max-width:1080px;margin:0 auto;width:100%;height:100%;display:flex;flex-direction:column;min-height:0;overflow-y:auto;}
+  .topline{display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(12px,2.4vw,34px);flex:none;}
+  .brand{font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);display:flex;align-items:center;gap:8px;}
+  .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--coral);}
+
+  /* ---------- LANDING ---------- */
+  #screen-landing{
+    background:
+      radial-gradient(ellipse 900px 500px at 78% 32%, rgba(240,180,41,.18), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 15% 70%, rgba(43,179,163,.14), transparent 60%),
+      var(--ink);
+    justify-content:center;
+  }
+  .landing-grid{max-width:1080px;margin:0 auto;width:100%;}
+  .landing-title{
+    font-family:var(--display);
+    font-size:clamp(48px,9vw,104px);line-height:.92;
+    margin:18px 0 8px;
+    text-transform:uppercase;
+  }
+  .landing-title .accent{color:var(--amber);}
+  .landing-sub{font-family:var(--mono);font-size:13px;color:var(--dim);max-width:440px;margin-bottom:26px;}
+  .landing-note{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:12px;}
+  .mic-decor{
+    position:absolute;right:6%;top:50%;transform:translateY(-50%);
+    width:min(30vw,320px);opacity:.9;pointer-events:none;
+  }
+
+  /* ---------- MENU ---------- */
+  .menu-head{margin-bottom:28px;}
+  .menu-title{font-family:var(--display);font-size:clamp(34px,6vw,58px);line-height:.95;text-transform:uppercase;}
+  .menu-title .v2{color:var(--amber);}
+  .menu-tags{font-family:var(--mono);font-size:12px;color:var(--dim);letter-spacing:.08em;margin-top:10px;}
+  .menu-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;margin-top:26px;}
+  @media (max-width:760px){.menu-grid{grid-template-columns:1fr;}}
+  @media (max-width:620px){
+    .seg-row{grid-template-columns:28px 72px 1fr auto;gap:8px;}
+    .seg-preview{width:72px;height:48px;}
+  }
+  .active-pack{padding:18px;display:flex;gap:14px;align-items:center;}
+  .active-pack .thumb{width:64px;height:64px;background:var(--panel-2);border:1px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--dim);}
+  .active-pack .meta{font-family:var(--mono);font-size:11px;color:var(--teal);text-transform:uppercase;letter-spacing:.08em;}
+  .active-pack .name{font-family:var(--display);font-size:20px;margin:4px 0;}
+  .menu-tiles{display:grid;gap:12px;}
+  .tile{
+    display:block;width:100%;text-align:left;padding:18px 20px;border:2px solid var(--ink);
+    font-family:var(--display);font-size:19px;text-transform:uppercase;color:var(--ink);
+    position:relative;
+  }
+  .tile span.desc{display:block;font-family:var(--body);font-size:12.5px;text-transform:none;font-weight:400;margin-top:4px;opacity:.85;}
+  .tile.t-amber{background:var(--amber);}
+  .tile.t-coral{background:var(--coral);color:var(--paper);}
+  .tile.t-dark{background:var(--panel-2);color:var(--paper);border-color:var(--line);}
+  .tile.t-teal-outline{background:var(--panel-2);color:var(--paper);border-color:var(--teal);}
+  .tile .upload-btn{
+    position:absolute;top:16px;right:16px;background:var(--amber);color:var(--ink);
+    font-family:var(--mono);font-size:11px;padding:6px 10px;border:1px solid var(--ink);letter-spacing:.05em;
+  }
+  .tile:hover{filter:brightness(1.06);}
+
+  .lib-card{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;
+    background:var(--panel-2);border:1px solid var(--line);padding:12px 16px;
+  }
+  .lib-card .lib-name{font-family:var(--display);font-size:16px;}
+  .lib-card .lib-desc{font-family:var(--body);font-size:12px;color:var(--dim);margin-top:2px;}
+  .lib-card button{
+    font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+    background:var(--teal);color:var(--ink);border:1px solid var(--ink);padding:8px 12px;flex:none;
+  }
+  .lib-card button:disabled{opacity:.5;cursor:wait;}
+
+  /* ---------- UPLOAD ---------- */
+  .dropzone{
+    border:2px dashed var(--line);padding:60px 20px;text-align:center;
+    background:var(--panel);
+  }
+  .dropzone.drag{border-color:var(--teal);background:var(--panel-2);}
+  .dropzone p{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:10px;}
+  #fileInput{display:none;}
+  .status-line{font-family:var(--mono);font-size:12px;color:var(--teal);margin-top:16px;min-height:18px;}
+  .status-line.err{color:var(--coral);}
+  .progress-track{height:8px;background:var(--panel-2);border:1px solid var(--line);margin-top:10px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--amber);width:0%;transition:width .2s ease;}
+
+  /* ---------- SEGMENTS REVIEW ---------- */
+  .pack-meta{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0 4px;flex:none;}
+  .pack-meta label{display:flex;flex-direction:column;gap:5px;font-family:var(--mono);font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;flex:1 1 220px;}
+  .pack-meta input{
+    background:var(--panel-2);color:var(--paper);border:1px solid var(--line);
+    padding:9px 10px;font-family:var(--body);font-size:13.5px;
+  }
+  .pack-meta input:focus{border-color:var(--teal);}
+
+  .char-setup{margin:10px 0 4px;flex:none;}
+  .char-setup .cap{font-family:var(--mono);font-size:11px;color:var(--teal);letter-spacing:.1em;text-transform:uppercase;margin-right:10px;}
+  .char-setup-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px;margin-bottom:8px;}
+  .char-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
+  .char-chip{
+    display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);
+    padding:6px 6px 6px 10px;
+  }
+  .char-chip .swatch{
+    width:16px;height:16px;border:1px solid rgba(0,0,0,.4);flex:none;cursor:pointer;padding:0;
+  }
+  .char-chip input[type="text"]{
+    background:transparent;border:none;color:var(--paper);font-family:var(--mono);font-size:12px;
+    width:96px;padding:2px 0;
+  }
+  .char-chip input[type="text"]:focus{outline:none;border-bottom:1px solid var(--teal);}
+  .char-chip .del{background:transparent;border:none;color:var(--dim);font-size:13px;padding:0 2px;}
+  .char-chip .del:hover{color:var(--coral);}
+  .btn.small{padding:8px 14px;font-size:12px;}
+
+  .seg-list{display:flex;flex-direction:column;gap:10px;margin-top:12px;flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:4px;}
+  .seg-row{display:grid;grid-template-columns:36px 108px 1fr auto;gap:14px;align-items:start;padding:12px 14px;background:var(--panel);border:1px solid var(--line);}
+  .seg-preview{position:relative;width:108px;height:64px;background:#000;border:1px solid var(--line);flex:none;overflow:hidden;}
+  .seg-preview video{width:100%;height:100%;object-fit:cover;display:block;}
+  .seg-preview .noclip{display:flex;align-items:center;justify-content:center;height:100%;font-family:var(--mono);font-size:9px;color:var(--dim);text-align:center;padding:4px;line-height:1.4;}
+  .seg-preview-play{
+    position:absolute;inset:0;margin:auto;width:30px;height:30px;padding:0;border-radius:50%;
+    background:rgba(12,10,8,.6);color:var(--paper);border:1px solid var(--paper);font-size:12px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .seg-preview-play:hover{background:var(--coral);border-color:var(--ink);}
+  .seg-preview.playing{border-color:var(--teal);}
+  .seg-preview.playing .seg-preview-play{background:var(--teal);color:var(--ink);border-color:var(--ink);}
+  .seg-preview-charlbl{position:absolute;top:0;left:0;right:0;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.03em;padding:2px 5px;background:rgba(0,0,0,.72);color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;}
+  .seg-row .num{font-family:var(--mono);color:var(--amber);font-size:13px;padding-top:8px;}
+  .seg-row .seg-main{display:flex;flex-direction:column;gap:6px;}
+  .seg-row textarea{
+    width:100%;resize:vertical;min-height:38px;background:var(--panel-2);color:var(--paper);
+    border:1px solid var(--line);padding:8px 10px;font-family:var(--body);font-size:13.5px;
+  }
+  .seg-row select.char-select{
+    background:var(--panel-2);color:var(--paper);border:1px solid var(--line);
+    font-family:var(--mono);font-size:11px;padding:5px 8px;align-self:flex-start;
+  }
+  .seg-row .len{font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap;padding-top:8px;}
+  .seg-row .del{background:transparent;border:none;color:var(--dim);font-size:16px;}
+  .seg-row .del:hover{color:var(--coral);}
+  .bottomnav{flex:none;}
+
+  /* ---------- DUB STAGE ---------- */
+  #screen-dub .stagebar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+  .rec-indicator{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--coral);text-transform:uppercase;letter-spacing:.1em;}
+  .rec-indicator .rd{width:8px;height:8px;border-radius:50%;background:var(--coral);}
+  .rec-indicator.live .rd{animation:blink 1s step-start infinite;}
+  .rec-timer{font-family:var(--mono);font-size:12px;color:var(--paper);background:var(--coral);padding:2px 7px;border:1px solid var(--ink);letter-spacing:.03em;}
+  @keyframes blink{50%{opacity:.15;}}
+  .dub-title{font-family:var(--mono);font-size:12px;color:var(--teal);text-transform:uppercase;letter-spacing:.08em;}
+  .dub-title b{color:var(--paper);font-size:14px;}
+  .lineindex{font-family:var(--mono);font-size:12px;color:var(--dim);}
+
+  .stage-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;flex:1 1 auto;min-height:0;}
+  @media (max-width:820px){.stage-grid{grid-template-columns:1fr;overflow-y:auto;}}
+  .clip-panel{background:#000;border:1px solid var(--line);position:relative;max-height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .clip-panel video{width:100%;height:100%;object-fit:contain;background:#000;}
+  .clip-watermark{position:absolute;bottom:10px;right:12px;font-family:var(--display);font-size:11px;color:var(--amber);opacity:.6;letter-spacing:.05em;}
+  .clip-badge{position:absolute;top:10px;left:10px;background:var(--coral);color:var(--paper);font-family:var(--mono);font-size:10px;padding:4px 8px;text-transform:uppercase;letter-spacing:.06em;}
+  .char-badge{position:absolute;bottom:10px;left:10px;font-family:var(--mono);font-size:11px;font-weight:700;padding:5px 10px;text-transform:uppercase;letter-spacing:.06em;border:1px solid rgba(0,0,0,.35);}
+
+  .line-panel{padding:20px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;min-height:0;}
+  .line-panel .cap{font-family:var(--mono);font-size:11px;color:var(--teal);letter-spacing:.1em;text-transform:uppercase;}
+  .line-text{font-family:var(--display);font-size:clamp(20px,3vw,26px);line-height:1.25;text-transform:none;}
+  .line-hint{font-family:var(--mono);font-size:11.5px;color:var(--dim);}
+  .wave{display:flex;align-items:center;gap:1.5px;height:68px;background:var(--panel-2);border:1px solid var(--line);padding:8px 10px;}
+  .wave i{flex:1;background:var(--amber);opacity:.9;border-radius:2px;min-height:4px;}
+  .wave.rec i{background:var(--coral);}
+  .wave.wave-rec i{background:var(--teal);}
+  .rec-progress-box{border:1px solid var(--line);background:var(--panel-2);padding:10px 12px;margin-top:10px;display:none;}
+  .rec-progress-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--coral);margin-bottom:8px;}
+  .rec-progress-track{position:relative;height:4px;background:var(--line);}
+  .rec-progress-fill{position:relative;height:100%;background:var(--dim);width:0%;}
+  .rec-progress-fill::after{content:"";position:absolute;right:-1px;top:-5px;bottom:-5px;width:2px;background:var(--coral);}
+  .rec-progress-times{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--fg);margin-top:8px;}
+  .rec-progress-times span:last-child{color:var(--dim);}
+  .line-score-block{margin-top:10px;display:none;}
+  .line-score-num{font-family:var(--display);font-size:44px;color:var(--teal);line-height:1;}
+  .line-score-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);}
+  .finish-score{font-family:var(--display);font-size:min(14vw,64px);color:var(--amber);line-height:1;margin:10px 0 2px;}
+  .finish-score-lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);}
+  .rec-audio-box{background:var(--panel-2);border:1px solid var(--line);padding:10px;min-height:44px;display:flex;align-items:center;font-family:var(--mono);font-size:11px;color:var(--dim);}
+
+  .stage-controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:18px;}
+  @media (max-width:600px){.stage-controls{grid-template-columns:1fr;}}
+  .ctrl-btn{
+    padding:14px;border:2px solid var(--ink);text-align:left;font-family:var(--display);
+    font-size:14px;text-transform:uppercase;background:var(--panel-2);color:var(--paper);border-color:var(--line);
+  }
+  .ctrl-btn small{display:block;font-family:var(--mono);font-size:10px;font-weight:400;text-transform:none;color:var(--dim);margin-top:4px;}
+  .ctrl-btn.replay{background:transparent;}
+  .ctrl-btn.record{background:var(--coral);color:var(--paper);border-color:var(--ink);}
+  .ctrl-btn.record.active{animation:pulse 1s ease-in-out infinite;}
+  .ctrl-btn.next{background:var(--amber);color:var(--ink);border-color:var(--ink);}
+  .ctrl-btn:disabled{background:var(--panel-2);color:var(--dim);border-color:var(--line);}
+
+  .bottomnav{display:flex;justify-content:space-between;margin-top:22px;}
+
+  /* ---------- FINISH ---------- */
+  #screen-finish .wrap{padding-top:20px;}
+  .finish-title{font-family:var(--display);font-size:clamp(32px,6vw,54px);text-transform:uppercase;line-height:.98;margin-bottom:6px;}
+  .finish-title .accent{color:var(--teal);}
+  #screen-finish .wrap{overflow-y:auto;}
+  .finish-video{width:100%;background:#000;border:1px solid var(--line);margin:22px 0;aspect-ratio:16/9;max-height:44vh;}
+  .finish-actions{display:flex;gap:12px;flex-wrap:wrap;}
+  .loglines{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:14px;max-height:120px;overflow-y:auto;line-height:1.6;}
+
+  /* ---------- overlay loader ---------- */
+  #loader{
+    position:fixed;inset:0;background:rgba(12,10,8,.92);z-index:50;
+    display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;
+  }
+  #loader.show{display:flex;}
+  .spinner{width:44px;height:44px;border:3px solid var(--line);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #loaderText{font-family:var(--mono);font-size:12px;color:var(--paper);letter-spacing:.05em;text-align:center;max-width:320px;}
+  #loaderSub{font-family:var(--mono);font-size:10.5px;color:var(--dim);}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--coral);color:var(--paper);padding:12px 18px;font-family:var(--mono);font-size:12px;
+    border:1px solid var(--ink);z-index:60;max-width:90vw;
+  }
+
+  /* ---------- countdown overlay ---------- */
+  #countdown{
+    position:fixed;inset:0;background:rgba(12,10,8,.88);z-index:55;
+    display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;
+  }
+  #countdown.show{display:flex;}
+  #countdown .num{font-family:var(--display);font-size:min(28vw,180px);color:var(--amber);line-height:1;}
+  #countdown .lbl{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);}
+  @keyframes countpop{0%{transform:scale(1.5);opacity:0;}60%{transform:scale(1);opacity:1;}100%{transform:scale(1);opacity:1;}}
+  #countdown .num.pop{animation:countpop .35s ease-out;}
+
+  /* ---------- timing editor on segment rows ---------- */
+  .seg-timing{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .seg-timing input[type="number"]{
+    width:64px;background:var(--panel-2);color:var(--paper);border:1px solid var(--line);
+    padding:5px 6px;font-family:var(--mono);font-size:11px;
+  }
+  .seg-timing input[type="number"]:focus{border-color:var(--teal);}
+  .seg-timing .tlbl{font-family:var(--mono);font-size:10px;color:var(--dim);text-transform:uppercase;}
+  .seg-timing .btn-split{
+    background:var(--panel-2);border:1px solid var(--teal);color:var(--teal);
+    font-family:var(--mono);font-size:10.5px;padding:5px 8px;letter-spacing:.04em;
+  }
+  .seg-timing .btn-split:hover{background:var(--teal);color:var(--ink);}
+
+  /* ---------- pack import/export ---------- */
+  .pack-io{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 4px;flex:none;}
+  #cvpackInput{display:none;}
+
+  /* ---------- multiplayer ---------- */
+  .room-code{
+    font-family:var(--display);font-size:clamp(30px,6vw,52px);letter-spacing:.08em;
+    color:var(--amber);background:var(--panel);border:2px solid var(--ink);
+    padding:14px 20px;display:inline-block;box-shadow:5px 5px 0 var(--coral);margin:10px 0;
+  }
+  .join-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px;}
+  .join-row input[type="text"]{
+    background:var(--panel-2);color:var(--paper);border:1px solid var(--line);
+    padding:12px 14px;font-family:var(--mono);font-size:16px;letter-spacing:.1em;text-transform:uppercase;
+    width:160px;
+  }
+  .join-row input[type="text"]:focus{border-color:var(--teal);}
+  .mp-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;flex:1 1 auto;min-height:0;}
+  @media (max-width:760px){.mp-cols{grid-template-columns:1fr;overflow-y:auto;}}
+  .player-list{display:flex;flex-direction:column;gap:8px;overflow-y:auto;}
+  .player-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--panel);border:1px solid var(--line);font-family:var(--mono);font-size:12px;}
+  .player-row .you{color:var(--teal);}
+  .player-row .host-tag{color:var(--amber);font-size:10px;letter-spacing:.06em;}
+  .claim-list{display:flex;flex-direction:column;gap:8px;overflow-y:auto;}
+  .claim-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--panel);border:1px solid var(--line);}
+  .claim-row .txt{font-family:var(--body);font-size:12.5px;flex:1;}
+  .claim-row .owner{font-family:var(--mono);font-size:10.5px;color:var(--dim);white-space:nowrap;}
+  .claim-row .owner.mine{color:var(--teal);}
+  .claim-row button{font-family:var(--mono);font-size:10.5px;padding:6px 9px;border:1px solid var(--line);background:var(--panel-2);color:var(--paper);}
+  .claim-row button.claimed{border-color:var(--amber);color:var(--amber);}
+  .room-hud{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;color:var(--teal);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;flex-wrap:wrap;}
+  .room-hud .code{color:var(--amber);}
+  .conn-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);display:inline-block;}
+  .conn-dot.on{background:var(--teal);}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ LANDING ============ -->
+  <section id="screen-landing" class="screen active">
+    <div class="landing-grid">
+      <span class="eyebrow"><span class="bars"><i></i><i></i><i></i><i></i></span> DUBBING GAME PRIVATO</span>
+      <h1 class="landing-title">CHOICER<br><span class="accent">VOICER</span></h1>
+      <p class="landing-sub">Carica un video, il gioco lo spezzetta in battute. Ascolti l'originale, registri la tua voce sopra e alla fine tutte le battute diventano una mega clip unica.</p>
+      <button class="btn" id="btnPlayNow">▶ Play Now</button>
+      <p class="landing-note">Il microfono viene richiesto solo quando premi Registra. Tutto resta nel tuo browser: nessun file va su un server.</p>
+    </div>
+  </section>
+
+  <!-- ============ MENU ============ -->
+  <section id="screen-menu" class="screen">
+    <div class="wrap">
+      <div class="topline">
+        <span class="brand"><span class="dot"></span>Choicer Voicer</span>
+        <button class="btn ghost" data-nav="landing">← Home</button>
+      </div>
+      <div class="menu-head">
+        <span class="eyebrow"><span class="bars"><i></i><i></i><i></i><i></i></span> BROWSER DUB STAGE</span>
+        <h2 class="menu-title">CHOICER<br><span class="v2">VOICER</span></h2>
+        <div class="menu-tags">LISTEN · PERFORM · COMPARE · DUB</div>
+      </div>
+
+      <div class="menu-grid">
+        <div class="card active-pack" id="activePackCard" style="display:none;">
+          <div class="thumb">CV</div>
+          <div>
+            <div class="meta">Pack attivo</div>
+            <div class="name" id="activePackName">—</div>
+            <div class="len" id="activePackLen" style="font-family:var(--mono);font-size:11px;color:var(--dim);"></div>
+          </div>
+        </div>
+        <div class="card active-pack" id="noPackCard">
+          <div class="thumb">＋</div>
+          <div>
+            <div class="meta">Nessun pack ancora</div>
+            <div class="name" style="font-size:16px;">Carica un video per iniziare</div>
+          </div>
+        </div>
+
+        <div class="menu-tiles">
+          <button class="tile t-amber" id="btnSinglePlayer" disabled>
+            Single Player
+            <span class="desc">Parti dal pack selezionato</span>
+          </button>
+          <button class="tile t-coral" id="btnMultiplayer">
+            Multiplayer
+            <span class="desc">Crea una stanza o entra con un codice · doppiate a più voci</span>
+          </button>
+          <button class="tile t-teal-outline" id="btnUploadTile" style="position:relative;">
+            Doppia Il Tuo Video
+            <span class="desc">Carica clip · spezzettamento auto · registra la tua versione</span>
+            <span class="upload-btn">Carica MP4 ↗</span>
+          </button>
+          <button class="tile t-dark" id="btnImportPackTile" style="position:relative;">
+            Importa Un Pack
+            <span class="desc">Carica un file .cvpack condiviso da un altro giocatore</span>
+            <span class="upload-btn">Carica .cvpack ↗</span>
+          </button>
+          <button class="tile t-dark" id="btnCreatorStudioTile" style="position:relative;">
+            Creator Studio
+            <span class="desc">Le mega clip che hai già montato in questa sessione, pronte da rivedere o scaricare</span>
+            <span class="upload-btn" id="creatorStudioCount" style="display:none;">0</span>
+          </button>
+        </div>
+        <input type="file" id="cvpackInput" accept=".cvpack">
+
+        <div id="libraryBlock" style="display:none;grid-column:1 / -1;margin-top:8px;">
+          <div class="cap" style="font-family:var(--mono);font-size:11px;color:var(--teal);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Pack pronti</div>
+          <div id="libraryList" style="display:grid;gap:10px;"></div>
+        </div>
+
+        <div id="publicLibraryBlock" style="grid-column:1 / -1;margin-top:16px;">
+          <div class="cap" style="font-family:var(--mono);font-size:11px;color:var(--teal);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <span>Modpack pubblici (condivisi da altri, approvati)</span>
+            <button type="button" id="btnRefreshPublicLibrary" class="btn ghost small" style="font-size:10px;padding:5px 8px;">↻ Aggiorna</button>
+          </div>
+          <div id="publicLibraryList" style="display:grid;gap:10px;"></div>
+        </div>
+
+        <div id="modPanel" style="display:none;grid-column:1 / -1;margin-top:16px;border:1px dashed var(--coral);padding:14px;">
+          <div class="cap" style="font-family:var(--mono);font-size:11px;color:var(--coral);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Moderazione pack in attesa</div>
+          <div id="modPanelList" style="display:grid;gap:10px;"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MULTIPLAYER HUB ============ -->
+  <section id="screen-multiplayer" class="screen">
+    <div class="wrap">
+      <div class="topline">
+        <span class="brand"><span class="dot"></span>Choicer Voicer</span>
+        <button class="btn ghost" data-nav="menu">← Indietro</button>
+      </div>
+      <span class="eyebrow">MULTIPLAYER</span>
+      <h2 class="menu-title" style="margin-top:14px;">STANZA<br><span class="v2">CONDIVISA</span></h2>
+      <p style="font-family:var(--mono);font-size:12px;color:var(--dim);max-width:560px;margin:10px 0 6px;">
+        Ogni stanza è una connessione diretta browser-a-browser (nessun server centrale che conserva i video). Per <b>entrare</b> in una stanza basta il codice, il pack arriva dall'host. Per <b>crearne una</b> serve avere già un pack attivo (carica un video, importa un .cvpack o pescane uno pubblico qui sotto).
+      </p>
+      <div class="menu-grid" style="margin-top:20px;">
+        <div class="card" style="padding:20px;">
+          <div class="meta" style="font-family:var(--mono);font-size:11px;color:var(--teal);text-transform:uppercase;letter-spacing:.08em;">Crea una stanza</div>
+          <p style="font-family:var(--mono);font-size:11.5px;color:var(--dim);margin:8px 0 12px;">Usa il pack attivo e genera un codice da condividere.</p>
+          <div id="mpNoPackHint" style="display:none;font-family:var(--mono);font-size:11px;color:var(--coral);border:1px dashed var(--coral);padding:10px;margin-bottom:12px;">
+            Non hai ancora un pack attivo.
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+              <button type="button" class="btn ghost small" id="mpBtnImportPack">Importa .cvpack</button>
+              <button type="button" class="btn ghost small" id="mpBtnBrowsePublic">Sfoglia pack pubblici ↓</button>
+            </div>
+          </div>
+          <label style="display:flex;flex-direction:column;gap:5px;font-family:var(--mono);font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">
+            Il tuo nome
+            <input type="text" id="hostNickInput" placeholder="Es. Marco" style="background:var(--panel-2);color:var(--paper);border:1px solid var(--line);padding:9px 10px;font-family:var(--body);font-size:13.5px;">
+          </label>
+          <button class="btn teal" id="btnCreateRoom" disabled>Crea stanza →</button>
+        </div>
+        <div class="card" style="padding:20px;">
+          <div class="meta" style="font-family:var(--mono);font-size:11px;color:var(--coral);text-transform:uppercase;letter-spacing:.08em;">Entra in una stanza</div>
+          <p style="font-family:var(--mono);font-size:11.5px;color:var(--dim);margin:8px 0 12px;">Inserisci il codice che ti ha dato chi ha creato la stanza.</p>
+          <label style="display:flex;flex-direction:column;gap:5px;font-family:var(--mono);font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">
+            Il tuo nome
+            <input type="text" id="guestNickInput" placeholder="Es. Giulia" style="background:var(--panel-2);color:var(--paper);border:1px solid var(--line);padding:9px 10px;font-family:var(--body);font-size:13.5px;">
+          </label>
+          <div class="join-row">
+            <input type="text" id="joinCodeInput" placeholder="CODICE" maxlength="6">
+            <button class="btn coral" id="btnJoinRoom">Entra →</button>
+          </div>
+        </div>
+      </div>
+      <div class="status-line" id="mpStatus"></div>
+    </div>
+  </section>
+
+  <!-- ============ ROOM LOBBY ============ -->
+  <section id="screen-room" class="screen">
+    <div class="wrap">
+      <div class="topline">
+        <span class="brand"><span class="dot"></span>Choicer Voicer</span>
+        <button class="btn ghost" id="btnLeaveRoom">← Esci dalla stanza</button>
+      </div>
+      <div class="room-hud">
+        <span class="conn-dot on" id="roomConnDot"></span>
+        <span>Stanza <span class="code" id="roomCodeOut">—</span></span>
+        <span id="roomLineCount"></span>
+        <span id="roomYouAre"></span>
+      </div>
+      <span class="eyebrow">LOBBY</span>
+      <h2 class="menu-title" style="margin-top:10px;font-size:clamp(26px,5vw,40px);">Scegli le tue battute</h2>
+      <p style="font-family:var(--mono);font-size:11.5px;color:var(--dim);max-width:600px;margin:8px 0 4px;">
+        Clicca "Prendi" su un personaggio per riservarti TUTTE le sue battute. Il doppiaggio va a TURNI, non in contemporanea: quando l'host lo avvia, si passa una scena alla volta — chi l'ha presa registra mentre gli altri guardano e aspettano, poi si passa alla scena dopo.
+      </p>
+      <div class="mp-cols">
+        <div>
+          <div class="cap" style="font-family:var(--mono);font-size:11px;color:var(--teal);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Giocatori</div>
+          <div class="player-list" id="playerList"></div>
+        </div>
+        <div>
+          <div class="cap" style="font-family:var(--mono);font-size:11px;color:var(--teal);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Battute</div>
+          <div class="claim-list" id="claimList"></div>
+        </div>
+      </div>
+      <p id="guestWaitTurnNote" style="display:none;font-family:var(--mono);font-size:11.5px;color:var(--coral);border:1px dashed var(--coral);padding:10px;margin-top:4px;">
+        In attesa che l'host avvii il doppiaggio a turni. Quando parte, verrai portato in automatico sulla scena da guardare o registrare — non serve premere nulla qui.
+      </p>
+      <div class="bottomnav">
+        <button class="btn teal" id="btnGoDubRoom">Avvia doppiaggio a turni →</button>
+        <button class="btn" id="btnAssembleRoom" style="display:none;">Genera video finale →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ UPLOAD ============ -->
+  <section id="screen-upload" class="screen">
+    <div class="wrap">
+      <div class="topline">
+        <span class="brand"><span class="dot"></span>Choicer Voicer</span>
+        <button class="btn ghost" data-nav="menu">← Indietro</button>
+      </div>
+      <span class="eyebrow">CARICA VIDEO</span>
+      <h2 class="menu-title" style="margin-top:14px;">CARICA<br><span class="v2">.MP4</span></h2>
+      <p style="font-family:var(--mono);font-size:12px;color:var(--dim);max-width:520px;margin:10px 0 22px;">
+        Il video viene analizzato per trovare le pause tra le frasi e diviso automaticamente in battute. Poi scrivi (o correggi) il testo di ogni battuta prima di iniziare a doppiare.
+      </p>
+
+      <div class="dropzone" id="dropzone">
+        <div style="font-family:var(--display);font-size:22px;">Trascina qui il tuo file</div>
+        <p>oppure</p>
+        <button class="btn" id="btnChooseFile" style="margin-top:10px;">Scegli file MP4</button>
+        <input type="file" id="fileInput" accept="video/mp4,video/*">
+        <p id="fileNameOut"></p>
+      </div>
+
+      <div class="status-line" id="uploadStatus"></div>
+      <div class="progress-track" id="progressTrack" style="display:none;"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </section>
+
+  <!-- ============ SEGMENTS REVIEW ============ -->
+  <section id="screen-segments" class="screen">
+    <div class="wrap">
+      <div class="topline">
+        <span class="brand"><span class="dot"></span>Choicer Voicer</span>
+        <button class="btn ghost" data-nav="upload">← Carica un altro video</button>
+      </div>
+      <span class="eyebrow">RIVEDI LE BATTUTE</span>
+      <h2 class="menu-title" style="margin-top:14px;font-size:clamp(26px,5vw,40px);">Controlla il testo<br><span class="v2" id="segCountLabel">0 battute trovate</span></h2>
+
+      <div class="pack-meta">
+        <label>Nome del pack<input type="text" id="packNameInput" placeholder="Es. Rissa al bar"></label>
+        <label>Creato da<input type="text" id="packCreatorInput" placeholder="Il tuo nome"></label>
+        <label>Descrizione (per il pack pubblico)<input type="text" id="packDescInput" placeholder="Es. 3 personaggi, scena al bar" maxlength="200"></label>
+      </div>
+      <div class="pack-io">
+        <button class="btn ghost small" id="btnExportPack">⬇ Esporta pack (.cvpack)</button>
+        <button class="btn ghost small" id="btnProposePublic">↑ Proponi come pack pubblico</button>
+        <span style="font-family:var(--mono);font-size:10.5px;color:var(--dim);align-self:center;">Un file unico (video + testi + personaggi) da condividere: chi lo importa lo ritrova pronto, in single player o in una stanza multiplayer. "Proponi come pubblico" lo invia alla libreria condivisa: diventa visibile a tutti subito.</span>
+      </div>
+
+      <div class="status-line" id="proposeStatus" style="display:none;"></div>
+
+      <div class="char-setup">
+        <div class="char-setup-head">
+          <span class="cap">Personaggi</span>
+          <span style="font-family:var(--mono);font-size:10.5px;color:var(--dim);">assegna un colore e un nome a chi parla, poi collegalo a ogni battuta</span>
+        </div>
+        <div class="char-chips" id="charChips"></div>
+        <button class="btn ghost small" id="btnAddChar">+ Personaggio</button>
+      </div>
+
+      <p style="font-family:var(--mono);font-size:11.5px;color:var(--dim);max-width:600px;margin:10px 0 6px;flex:none;">
+        Il gioco individua da solo dove iniziano e finiscono le frasi. Scrivi il testo di ogni battuta e assegna un personaggio — puoi anche unire o eliminare righe.
+      </p>
+      <div class="seg-list" id="segList"></div>
+      <div class="bottomnav">
+        <button class="btn ghost" id="btnAddSeg">+ Aggiungi riga</button>
+        <button class="btn" id="btnStartDub">Inizia a doppiare →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DUB STAGE ============ -->
+  <section id="screen-dub" class="screen">
+    <div class="wrap">
+      <div class="topline">
+        <span class="brand"><span class="dot"></span>Choicer Voicer</span>
+        <button class="btn ghost" data-nav="segments">← Testi</button>
+      </div>
+      <div class="stagebar">
+        <div>
+          <div class="dub-title">SINGLE PLAYER / DUB STAGE<br><b id="packNameStage">Il tuo pack</b></div>
+        </div>
+        <div class="rec-indicator" id="recIndicator"><span class="rd"></span> PRONTO<span class="rec-timer" id="recTimer" style="display:none;">00:00</span></div>
+        <div class="lineindex" id="lineIndexLabel">LINE 1 / 1</div>
+      </div>
+
+      <div class="stage-grid">
+        <div class="clip-panel">
+          <span class="clip-badge">CV</span>
+          <span class="char-badge" id="charBadge" style="display:none;"></span>
+          <video id="clipVideo" playsinline></video>
+          <span class="clip-watermark">CHOICERVOICER.LOCAL</span>
+        </div>
+        <div class="card line-panel">
+          <div id="turnWaitBanner" style="display:none;font-family:var(--mono);font-size:11.5px;color:var(--coral);border:1px dashed var(--coral);padding:10px;"></div>
+          <div class="cap">La tua battuta</div>
+          <div class="line-text" id="lineTextOut">—</div>
+          <div class="line-hint">Ascolta una volta, poi registra sopra con lo stesso ritmo ed energia.</div>
+          <div class="rec-progress-box" id="recProgressBox">
+            <div class="rec-progress-lbl">RECORDING</div>
+            <div class="rec-progress-track"><div class="rec-progress-fill" id="recProgressFill"></div></div>
+            <div class="rec-progress-times">
+              <span id="recProgressElapsed">0.0s / 0.0s</span>
+              <span id="recProgressLeft">0.0s LEFT</span>
+            </div>
+          </div>
+          <div class="wave" id="waveOriginal"></div>
+          <div class="cap" style="margin-top:6px;">La tua registrazione</div>
+          <div class="wave wave-rec" id="waveRec" style="display:none;"></div>
+          <div class="rec-audio-box" id="recBox">Nessuna registrazione ancora.</div>
+          <div class="line-score-block" id="lineScoreBlock">
+            <div class="line-score-num" id="lineScoreNum">—</div>
+            <div class="line-score-lbl">Match score</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage-controls">
+        <button class="ctrl-btn replay" id="btnReplay">▶ Replay<small>Ascolta l'originale</small></button>
+        <button class="ctrl-btn record" id="btnRecord">● Registra<small>Usa il microfono</small></button>
+        <button class="ctrl-btn" id="btnPlayMine" disabled>▶ Ascolta la tua voce<small>Riascolta la tua registrazione</small></button>
+      </div>
+      <div class="bottomnav">
+        <button class="btn ghost" id="btnPrevLine">← Precedente</button>
+        <button class="btn teal" id="btnNextLine">Successiva →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CREATOR STUDIO ============ -->
+  <section id="screen-creator" class="screen">
+    <div class="wrap">
+      <div class="topline">
+        <span class="brand"><span class="dot"></span>Choicer Voicer</span>
+        <button class="btn ghost" data-nav="menu">← Indietro</button>
+      </div>
+      <span class="eyebrow">CREATOR STUDIO</span>
+      <h2 class="menu-title" style="margin-top:14px;">LE TUE<br><span class="v2">MEGA CLIP</span></h2>
+      <p style="font-family:var(--mono);font-size:12px;color:var(--dim);max-width:560px;margin:10px 0 20px;">
+        Ogni mega clip montata in questa sessione resta qui, anche se non l'hai scaricata subito: puoi rivederla o scaricarla in un secondo momento. Si svuota quando finisci il doppiaggio (Nuovo doppiaggio) o quando chiudi/ricarichi la pagina — niente resta salvato da una sessione all'altra.
+      </p>
+      <div id="creatorStudioEmpty" style="font-family:var(--mono);font-size:12px;color:var(--dim);">Nessuna mega clip ancora in questa sessione.</div>
+      <div id="creatorStudioList" style="display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));"></div>
+    </div>
+  </section>
+
+  <!-- ============ FINISH ============ -->
+  <section id="screen-finish" class="screen">
+    <div class="wrap">
+      <span class="eyebrow"><span class="bars"><i></i><i></i><i></i><i></i></span> MEGA CLIP</span>
+      <h2 class="finish-title">TUTTO<br><span class="accent">UNITO</span></h2>
+      <p style="font-family:var(--mono);font-size:12px;color:var(--dim);max-width:560px;">
+        Il gioco sta rimontando tutte le battute — quelle doppiate con la tua voce e quelle che hai saltato con l'audio originale — in un unico video finale.
+      </p>
+      <video id="finalVideo" class="finish-video" controls></video>
+      <div id="finishScoreBlock" style="display:none;">
+        <div class="finish-score-lbl">Punteggio doppiaggio</div>
+        <div class="finish-score" id="finishScoreOut">—</div>
+      </div>
+      <div class="finish-actions">
+        <a class="btn" id="btnDownload" download="choicer-voicer-megaclip.mp4">⬇ Scarica il video finale</a>
+        <button class="btn ghost" id="btnBackToRoom" style="display:none;">← Torna alla stanza</button>
+        <button class="btn ghost" id="btnFinishNewDub">↺ Nuovo doppiaggio</button>
+        <button class="btn ghost" id="btnFinishHome">🏠 Home</button>
+      </div>
+      <div class="loglines" id="finishLog"></div>
+    </div>
+  </section>
+
+</div>
+
+<div id="loader">
+  <div class="spinner"></div>
+  <div id="loaderText">Preparazione…</div>
+  <div id="loaderSub"></div>
+  <button class="btn ghost small" id="btnCancelLoad" style="margin-top:6px;">Annulla</button>
+</div>
+
+<div id="countdown">
+  <div class="num" id="countdownNum">3</div>
+  <div class="lbl">Preparati a parlare…</div>
+</div>
+
+<div id="toastHost"></div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script type="module">
+// Importiamo il wrapper @ffmpeg/ffmpeg e @ffmpeg/util dal NOSTRO dominio
+// (/vendor/...) invece che direttamente da unpkg. Netlify fa da proxy
+// trasparente verso unpkg (vedi netlify.toml), così per il browser questi
+// file sono "same-origin": la libreria può creare il proprio Web Worker
+// interno senza essere bloccata dalla restrizione sui worker cross-origin,
+// e i file che worker.js importa al suo interno (const.js, errors.js)
+// si risolvono correttamente perché restano tutti sotto lo stesso percorso
+// proxato, invece di rompersi come succedeva scaricandoli a mano come blob.
+import { FFmpeg } from "/vendor/ffmpeg-ffmpeg/index.js";
+import { fetchFile } from "/vendor/ffmpeg-util/index.js";
+
+/* ---------------------------------------------------------------
+   CHOICER VOICER — dubbing game, single file, tutto lato client.
+   Flusso: carica mp4 -> ffmpeg individua le pause -> battute ->
+   registri sopra ogni battuta -> ffmpeg rimonta tutto -> download.
+------------------------------------------------------------------*/
+
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+/* ---------- navigation ---------- */
+function showScreen(name){
+  if (typeof stopAllPreviews === "function") stopAllPreviews(); // non lasciare l'audio di un'anteprima clip acceso cambiando schermata
+  $$(".screen").forEach(s => s.classList.remove("active"));
+  const el = $("#screen-" + name);
+  if (el) el.classList.add("active");
+  window.scrollTo(0,0);
+}
+$$("[data-nav]").forEach(btn => {
+  btn.addEventListener("click", () => showScreen(btn.dataset.nav));
+});
+$("#btnPlayNow").addEventListener("click", () => showScreen("menu"));
+$("#btnUploadTile").addEventListener("click", () => showScreen("upload"));
+$("#btnCreatorStudioTile").addEventListener("click", () => {
+  renderCreatorStudio();
+  showScreen("creator");
+});
+$("#btnMultiplayer").addEventListener("click", () => {
+  // il tile "Multiplayer" ora è sempre cliccabile: per ENTRARE in una stanza
+  // non serve nessun pack (arriva dall'host), serve solo per CREARLA.
+  // Se non c'è ancora un pack attivo mostriamo il suggerimento inline invece
+  // di bloccare l'accesso all'intera schermata multiplayer.
+  $("#mpNoPackHint").style.display = sourceFile ? "none" : "block";
+  showScreen("multiplayer");
+});
+$("#mpBtnImportPack").addEventListener("click", () => {
+  returnToMultiplayerAfterPack = true;
+  $("#cvpackInput").click();
+});
+$("#mpBtnBrowsePublic").addEventListener("click", () => {
+  returnToMultiplayerAfterPack = true;
+  showScreen("menu");
+  initPublicModpackLibrary();
+  const block = $("#publicLibraryBlock");
+  if (block) block.scrollIntoView({ behavior:"smooth", block:"center" });
+});
+
+// Se sei in una stanza (host o guest) e finisci sulla schermata "finish" — sia
+// per un montaggio riuscito che per uno fallito — la stanza resta viva
+// (peer, connessioni, claim tutto attivo): prima questo pulsante non c'era e
+// l'unica via era "Nuovo doppiaggio", che però abbandonava la stanza attiva
+// senza dirlo, rendendola irraggiungibile dall'interfaccia.
+$("#btnBackToRoom").addEventListener("click", () => {
+  renderRoom();
+  showScreen("room");
+});
+// "Nuovo doppiaggio" deve davvero ripartire da zero: se eri in una stanza,
+// esci in modo pulito (distrugge il peer, azzera claim/registrazioni) invece
+// di lasciarla appesa in background.
+$("#btnFinishNewDub").addEventListener("click", () => {
+  if (roomCode) leaveRoom();
+  resetCreatorStudio();
+  showScreen("menu");
+});
+// "Home" dalla mega clip: stesso comportamento pulito di "Nuovo doppiaggio"
+// (esce dalla stanza se presente) ma torna alla landing invece che al menu.
+$("#btnFinishHome").addEventListener("click", () => {
+  if (roomCode) leaveRoom();
+  showScreen("landing");
+});
+
+/* ---------- loader helpers ---------- */
+const loader = $("#loader");
+function loading(msg, sub=""){
+  $("#loaderText").textContent = msg;
+  $("#loaderSub").textContent = sub;
+  loader.classList.add("show");
+}
+function stopLoading(){ loader.classList.remove("show"); }
+$("#btnCancelLoad").addEventListener("click", () => {
+  stopLoading();
+  toast("Operazione annullata.");
+});
+function toast(msg, duration=4200){
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  $("#toastHost").appendChild(t);
+  setTimeout(() => t.remove(), duration);
+}
+
+// se il file è aperto direttamente (file://) invece che via server, molte cose
+// (script module, ffmpeg.wasm, a volte anche i Blob) si comportano in modo
+// inaffidabile nei browser: è la causa più comune del "il video finale non parte".
+if (location.protocol === "file:"){
+  toast("Stai aprendo il file direttamente dal disco (file://): ffmpeg e il montaggio finale possono non funzionare così. Avvia un piccolo server locale nella cartella (es. «python3 -m http.server» e poi apri http://localhost:8000) oppure carica il file su un hosting.", 9000);
+}
+
+/* ---------- ffmpeg setup ---------- */
+let ffmpeg = null;
+let ffmpegReady = false;
+let ffmpegLoadPromise = null;
+
+// più mirror per il CORE (ffmpeg-core.js + .wasm, ~30MB), provati in ordine:
+// se uno è lento/bloccato/offline, si passa al successivo. Il core resta
+// scaricato direttamente da CDN come blob (nessun problema di worker qui,
+// questi sono solo dati passati a ffmpeg.load(), non script eseguiti come
+// Worker) — IMPORTANTE: deve restare dist/esm, non dist/umd, per restare
+// coerente con il wrapper @ffmpeg/ffmpeg che importiamo come modulo ESM.
+// Il wrapper stesso (e il suo worker.js interno) non serve più elencarlo
+// qui: viene importato una volta sola in cima al file dal nostro dominio
+// via proxy (/vendor/ffmpeg-ffmpeg/), quindi il problema del worker
+// cross-origin è già risolto a monte.
+const FFMPEG_MIRRORS = [
+  { core: "/vendor/ffmpeg-core-a" },
+  { core: "/vendor/ffmpeg-core-b" },
+];
+
+function withTimeout(promise, ms, message){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+  ]);
+}
+
+// Scarica un file mostrando il progresso reale (byte ricevuti / totali) e con
+// un timeout "a inattività": prima il motore veniva dichiarato morto dopo un
+// tempo fisso anche se in realtà stava ancora scaricando (solo lento), il che
+// causava il fastidioso "il motore non ha risposto" mentre la barra caricava
+// ancora. Ora il download fallisce SOLO se non arriva più nessun byte per
+// idleMs consecutivi; finché i dati continuano ad arrivare, anche piano, si
+// aspetta (fino a un tetto massimo hardMs come rete di sicurezza).
+// returnBlob=true (default): risolve con un blob URL locale (utile per file
+// che vengono solo LETTI come dati, es. il video sorgente).
+// returnBlob=false: scarica comunque tutto (per la barra di progresso e per
+// "scaldare" la cache del browser), ma risolve con l'URL originale — serve
+// per i file che ffmpeg importa/esegue come modulo ES (ffmpeg-core.js), dove
+// un blob romperebbe i riferimenti relativi interni del file stesso.
+function fetchWithProgress(url, mimeType, onProgress, idleMs, hardMs, returnBlob=true){
+  return new Promise((resolve, reject) => {
+    const controller = new AbortController();
+    let idleTimer = null, hardTimer = null, settled = false;
+
+    const cleanup = () => { clearTimeout(idleTimer); clearTimeout(hardTimer); };
+    const fail = (msg) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      controller.abort();
+      reject(new Error(msg));
+    };
+    const resetIdle = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => fail("Connessione bloccata: nessun dato ricevuto da un po', scaricando " + url.split("/").pop()), idleMs);
+    };
+    hardTimer = setTimeout(() => fail("Il download di " + url.split("/").pop() + " sta impiegando troppo tempo."), hardMs);
+    resetIdle();
+
+    fetch(url, { signal: controller.signal }).then(async (res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status} scaricando ${url.split("/").pop()}`);
+      const total = parseInt(res.headers.get("content-length") || "0", 10);
+
+      if (!res.body || !res.body.getReader){
+        // fallback per browser senza streaming body: nessun progresso intermedio
+        const buf = await res.arrayBuffer();
+        if (settled) return;
+        settled = true; cleanup();
+        resolve(returnBlob ? URL.createObjectURL(new Blob([buf], { type: mimeType })) : url);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const chunks = [];
+      let received = 0;
+      while (true){
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (settled) return; // già fallito (es. hard timeout) nel frattempo
+        chunks.push(value);
+        received += value.byteLength;
+        resetIdle();
+        if (onProgress) onProgress(received, total);
+      }
+      if (settled) return;
+      settled = true; cleanup();
+      resolve(returnBlob ? URL.createObjectURL(new Blob([chunks], { type: mimeType })) : url);
+    }).catch(err => fail(err && err.message ? err.message : "Errore di rete."));
+  });
+}
+
+async function loadFFmpegFrom(mirror, silent){
+  const fmtMB = n => (n/1024/1024).toFixed(1);
+  const mkProgress = (label) => (received, total) => {
+    if (silent) return;
+    const pct = total ? Math.min(100, Math.round(received/total*100)) : null;
+    const sizeTxt = total ? `${fmtMB(received)} / ${fmtMB(total)} MB` : `${fmtMB(received)} MB scaricati`;
+    loading("Scarico il motore video…", `${label} · ${sizeTxt}${pct!==null?` · ${pct}%`:""}`);
+  };
+  // idle timeout 20s (fallisce solo se i dati si fermano davvero), tetto massimo
+  // più alto sul file grande (~25-30MB) per tollerare connessioni lente reali.
+  // returnBlob=false: vogliamo che ffmpeg.load() riceva l'URL reale (proxato,
+  // same-origin) e non un blob, perché ffmpeg-core.js referenzia se stesso e
+  // il proprio .wasm con percorsi relativi che un blob romperebbe. Scarichiamo
+  // comunque tutto qui per la barra di progresso e per scaldare la cache del
+  // browser, così il caricamento vero e proprio subito dopo è quasi istantaneo.
+  const coreURL = await fetchWithProgress(`${mirror.core}/ffmpeg-core.js`, "text/javascript", mkProgress("ffmpeg-core.js"), 20000, 60000, false);
+  const wasmURL = await fetchWithProgress(`${mirror.core}/ffmpeg-core.wasm`, "application/wasm", mkProgress("ffmpeg-core.wasm"), 20000, 240000, false);
+
+  if (!silent) loading("Avvio il motore…", "Download completato, inizializzo ffmpeg (ultimo passaggio).");
+  // qui i file sono già in locale (blob URL): l'istanziazione wasm è compute-bound,
+  // quindi un timeout fisso ha senso (non dipende dalla velocità di rete).
+  // Nessun classWorkerURL da passare: il wrapper è same-origin (proxato via
+  // Netlify), quindi crea da solo il proprio worker interno senza inciampare
+  // nella restrizione cross-origin né nei suoi import relativi (const.js,
+  // errors.js) che invece si rompevano quando provavamo a gestirli a mano.
+  await withTimeout(ffmpeg.load({ coreURL, wasmURL }), 90000, "Il motore video non ha risposto in tempo durante l'inizializzazione.");
+}
+
+// silent=true: precarica il motore in background (durante il dub stage) senza
+// mostrare l'overlay di caricamento, così quando l'utente finisce di doppiare
+// il video finale è già (o quasi) pronto invece di partire da zero in quel momento.
+async function ensureFFmpeg(silent=false){
+  if (ffmpegReady) return ffmpeg;
+  if (ffmpegLoadPromise) return ffmpegLoadPromise;
+
+  ffmpegLoadPromise = (async () => {
+    let lastErr = null;
+    for (let i = 0; i < FFMPEG_MIRRORS.length; i++){
+      // un'istanza nuova per ogni tentativo: se il tentativo precedente è
+      // andato in timeout ma il suo load() interno era ancora in corso in
+      // background, non deve interferire con quello nuovo riusando lo
+      // stesso oggetto FFmpeg.
+      ffmpeg = new FFmpeg();
+      ffmpeg.on("log", ({ message }) => { lastLogs.push(message); });
+      if (!silent) loading("Avvio del motore per il montaggio finale…", `Server ${i+1}/${FFMPEG_MIRRORS.length} · solo ora scarica ~30MB, poi resta in cache. Carica e dubbing restano istantanei.`);
+      try {
+        await loadFFmpegFrom(FFMPEG_MIRRORS[i], silent);
+        ffmpegReady = true;
+        if (!silent) stopLoading();
+        return ffmpeg;
+      } catch (err) {
+        console.error("Caricamento ffmpeg fallito su", FFMPEG_MIRRORS[i].core, err);
+        lastErr = err;
+      }
+    }
+    if (!silent) stopLoading();
+    throw new Error((lastErr && lastErr.message ? lastErr.message + " " : "") + "Non riesco ad avviare il motore video: prova a ricaricare la pagina o controlla la connessione.");
+  })();
+
+  try {
+    return await ffmpegLoadPromise;
+  } finally {
+    ffmpegLoadPromise = null;
+  }
+}
+let lastLogs = [];
+
+/* ---------- state ---------- */
+let sourceFile = null;         // File caricato
+let lines = [];                // [{ id, start, end, text, segBlobUrl, segFile, recording:{blob,url}|null, characterId }]
+let currentLineIndex = 0;
+let packMeta = { name: "", creator: "" };
+
+/* ---------- creator studio ---------- */
+// mega clip montate in QUESTA sessione: anche se non scarichi subito il
+// video, resta qui (blob in memoria, mai su un server) e puoi tornare a
+// vederlo/scaricarlo. Si svuota solo con resetCreatorStudio() (fine
+// doppiaggio o chiusura pagina), mai da solo mentre lavori.
+let creatorStudioClips = []; // [{ id, name, blob, url, createdAt }]
+let creatorStudioSeq = 0;
+
+function addCreatorStudioClip(blob){
+  const url = URL.createObjectURL(blob);
+  const name = (packMeta.name || "Mega clip") + " — " + new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
+  creatorStudioClips.push({ id: creatorStudioSeq++, name, blob, url, createdAt: Date.now() });
+  renderCreatorStudio();
+  updateCreatorStudioBadge();
+}
+
+function updateCreatorStudioBadge(){
+  const badge = $("#creatorStudioCount");
+  if (!badge) return;
+  if (creatorStudioClips.length){
+    badge.textContent = String(creatorStudioClips.length);
+    badge.style.display = "inline-block";
+  } else {
+    badge.style.display = "none";
+  }
+}
+
+function renderCreatorStudio(){
+  const host = $("#creatorStudioList");
+  const empty = $("#creatorStudioEmpty");
+  if (!host) return;
+  host.innerHTML = "";
+  empty.style.display = creatorStudioClips.length ? "none" : "block";
+  // le più recenti in alto
+  [...creatorStudioClips].reverse().forEach(clip => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.style.padding = "12px";
+    card.innerHTML = `
+      <video src="${clip.url}" controls style="width:100%;background:#000;border:1px solid var(--line);display:block;margin-bottom:8px;"></video>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-bottom:8px;">${escapeHtml(clip.name)}</div>
+      <a class="btn ghost small" href="${clip.url}" download="choicer-voicer-megaclip.mp4">⬇ Scarica</a>
+    `;
+    host.appendChild(card);
+  });
+}
+
+// svuota lo storage del creator studio e libera la memoria dei blob:
+// va chiamata a fine doppiaggio ("Nuovo doppiaggio") e quando si
+// esce/ricarica la pagina, mai in mezzo a una sessione di lavoro.
+function resetCreatorStudio(){
+  creatorStudioClips.forEach(clip => URL.revokeObjectURL(clip.url));
+  creatorStudioClips = [];
+  renderCreatorStudio();
+  updateCreatorStudioBadge();
+}
+window.addEventListener("beforeunload", resetCreatorStudio);
+
+/* ---------- personaggi ---------- */
+const CHAR_PALETTE = ["#e35d4f","#2bb3a3","#f0b429","#8a7ff0","#5fb3e0","#e88ac0","#9bd15a","#f08a3c"];
+let characters = [];   // [{ id, name, color }]
+let charSeq = 0;
+
+function addCharacter(name){
+  const color = CHAR_PALETTE[characters.length % CHAR_PALETTE.length];
+  characters.push({ id: "c" + (charSeq++), name: name || `Personaggio ${characters.length+1}`, color });
+  buildCharChips();
+  buildSegmentsReview();
+}
+function buildCharChips(){
+  const host = $("#charChips");
+  host.innerHTML = "";
+  characters.forEach(ch => {
+    const chip = document.createElement("div");
+    chip.className = "char-chip";
+    chip.innerHTML = `
+      <button class="swatch" data-cyclecolor="${ch.id}" style="background:${ch.color};" title="Cambia colore"></button>
+      <input type="text" data-charname="${ch.id}" value="${escapeHtml(ch.name)}" placeholder="Nome personaggio">
+      <button class="del" data-delchar="${ch.id}" title="Rimuovi personaggio">✕</button>
+    `;
+    host.appendChild(chip);
+  });
+  host.querySelectorAll("[data-cyclecolor]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const ch = characters.find(c => c.id === btn.dataset.cyclecolor);
+      const idx = CHAR_PALETTE.indexOf(ch.color);
+      ch.color = CHAR_PALETTE[(idx+1) % CHAR_PALETTE.length];
+      buildCharChips();
+    });
+  });
+  host.querySelectorAll("[data-charname]").forEach(inp => {
+    inp.addEventListener("input", () => {
+      const ch = characters.find(c => c.id === inp.dataset.charname);
+      ch.name = inp.value;
+      buildSegmentsReview();
+    });
+  });
+  host.querySelectorAll("[data-delchar]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.delchar;
+      characters = characters.filter(c => c.id !== id);
+      lines.forEach(l => { if (l.characterId === id) l.characterId = null; });
+      buildCharChips();
+      buildSegmentsReview();
+    });
+  });
+}
+function getCharacter(id){
+  return characters.find(c => c.id === id) || null;
+}
+
+/* =========================================================
+   UPLOAD + SILENCE DETECTION -> SEGMENTS
+========================================================= */
+const dropzone = $("#dropzone");
+const fileInput = $("#fileInput");
+$("#btnChooseFile").addEventListener("click", () => fileInput.click());
+dropzone.addEventListener("dragover", e => { e.preventDefault(); dropzone.classList.add("drag"); });
+dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag"));
+dropzone.addEventListener("drop", e => {
+  e.preventDefault(); dropzone.classList.remove("drag");
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+fileInput.addEventListener("change", e => {
+  const f = e.target.files[0];
+  if (f) handleFile(f);
+});
+
+function setUploadStatus(msg, isErr=false){
+  const el = $("#uploadStatus");
+  el.textContent = msg;
+  el.classList.toggle("err", isErr);
+}
+
+async function handleFile(file){
+  if (!file.type.startsWith("video/")) {
+    setUploadStatus("Questo non sembra un file video. Serve un .mp4.", true);
+    return;
+  }
+  sourceFile = file;
+  $("#fileNameOut").textContent = file.name + " · " + (file.size/1024/1024).toFixed(1) + " MB";
+  setUploadStatus("");
+  $("#progressTrack").style.display = "block";
+  $("#progressFill").style.width = "10%";
+
+  try {
+    loading("Analisi del video…", "Cerco le pause tra una frase e l'altra (nessun download, tutto nel browser).");
+
+    const arrayBuffer = await file.arrayBuffer();
+    $("#progressFill").style.width = "35%";
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let audioBuffer;
+    try {
+      audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+    } catch (decodeErr) {
+      // alcuni file mp4 non si decodificano bene con decodeAudioData: fallback a battuta unica
+      stopLoading();
+      const dur = await getVideoDuration(file);
+      lines = [{ id:0, start:0, end:dur, text:"Battuta 1", segFileName:null, recording:null, characterId:null }];
+      finishSegmentation(file, "Non riesco ad analizzare l'audio nel dettaglio: creo un'unica battuta con tutto il video.");
+      return;
+    }
+    $("#progressFill").style.width = "60%";
+
+    const segments = detectSpeechSegments(audioBuffer);
+    audioCtx.close();
+
+    if (segments.length === 0) {
+      segments.push({ start: 0, end: audioBuffer.duration });
+    }
+
+    lines = segments.map((seg, i) => ({
+      id: i,
+      start: seg.start,
+      end: seg.end,
+      text: `Battuta ${i+1}`,
+      segFileName: null,   // non serve più: usiamo il video sorgente + seek
+      recording: null,
+      characterId: null
+    }));
+
+    $("#progressFill").style.width = "100%";
+    stopLoading();
+    finishSegmentation(file, `Fatto: ${lines.length} battute pronte.`);
+  } catch (err) {
+    console.error(err);
+    stopLoading();
+    setUploadStatus("Qualcosa è andato storto durante l'analisi del video: " + err.message, true);
+  }
+}
+
+function getVideoDuration(file){
+  return new Promise((resolve) => {
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.onloadedmetadata = () => { resolve(v.duration || 5); URL.revokeObjectURL(v.src); };
+    v.onerror = () => resolve(5);
+    v.src = URL.createObjectURL(file);
+  });
+}
+
+// Analizza l'ampiezza dell'audio a finestre e trova le pause (silenzi) per
+// dedurre dove iniziano/finiscono le frasi. Tutto sincrono, nessun upload.
+function detectSpeechSegments(audioBuffer){
+  const data = audioBuffer.getChannelData(0);
+  const sr = audioBuffer.sampleRate;
+  const windowSize = Math.round(sr * 0.05); // finestre da 50ms
+  const rms = [];
+  for (let i = 0; i < data.length; i += windowSize){
+    let sum = 0;
+    const end = Math.min(i + windowSize, data.length);
+    for (let j = i; j < end; j++) sum += data[j]*data[j];
+    rms.push(Math.sqrt(sum / (end - i)));
+  }
+  const maxRms = Math.max(...rms, 1e-6);
+  const threshold = maxRms * 0.08; // sotto l'8% del picco = silenzio
+  const minSilenceWindows = Math.max(1, Math.round(0.35 / 0.05)); // ~0.35s
+  const minSpeechWindows = Math.max(1, Math.round(0.25 / 0.05));
+
+  const segments = [];
+  let speechStart = null;
+  let silenceRun = 0;
+
+  for (let i = 0; i < rms.length; i++){
+    const isSilence = rms[i] < threshold;
+    if (!isSilence){
+      if (speechStart === null) speechStart = i;
+      silenceRun = 0;
+    } else {
+      if (speechStart !== null){
+        silenceRun++;
+        if (silenceRun >= minSilenceWindows){
+          const speechEnd = i - silenceRun + 1;
+          if (speechEnd - speechStart >= minSpeechWindows){
+            segments.push({
+              start: Math.max(0, speechStart * 0.05 - 0.05),
+              end: Math.min(audioBuffer.duration, speechEnd * 0.05 + 0.05)
+            });
+          }
+          speechStart = null;
+          silenceRun = 0;
+        }
+      }
+    }
+  }
+  if (speechStart !== null){
+    segments.push({
+      start: Math.max(0, speechStart * 0.05 - 0.05),
+      end: audioBuffer.duration
+    });
+  }
+  return segments;
+}
+
+// quando true, un pack appena importato/scelto (via "Importa .cvpack" o
+// "Sfoglia pack pubblici" lanciati dalla schermata multiplayer) deve
+// riportare l'utente dritto alla schermata multiplayer invece che ai
+// "Testi" del pack — così può creare subito la stanza senza doverci
+// tornare a mano.
+let returnToMultiplayerAfterPack = false;
+
+// quando true, il pack appena caricato viene dalla libreria pubblica: chi
+// lo apre deve poter solo doppiare, non modificare testi/personaggi, quindi
+// si salta la schermata "Testi" e si va dritti al doppiaggio in single player.
+let skipEditForPublicPack = false;
+
+function startDubbing(){
+  if (!lines.length){ toast("Carica prima un video."); return; }
+  currentLineIndex = 0;
+  $("#packNameStage").textContent = packMeta.name || $("#activePackName").textContent || "Il tuo pack";
+  buildWave("#waveOriginal", 28);
+  loadDubLine();
+  showScreen("dub");
+  ensureFFmpeg(true).catch(() => {}); // precarica il motore video in background: sarà già pronto a fine doppiaggio
+}
+
+function finishSegmentation(file, statusMsg){
+  setUploadStatus(statusMsg);
+
+  // reset personaggi e metadati per il nuovo pack
+  characters = [];
+  packMeta = { name: file.name.replace(/\.[^.]+$/, ""), creator: "" };
+  $("#packNameInput").value = packMeta.name;
+  $("#packCreatorInput").value = "";
+  buildCharChips();
+  buildSegmentsReview();
+
+  $("#activePackCard").style.display = "flex";
+  $("#noPackCard").style.display = "none";
+  $("#activePackName").textContent = packMeta.name;
+  updateActivePackMeta();
+  $("#btnSinglePlayer").disabled = false;
+  $("#btnCreateRoom").disabled = false;
+
+  if (returnToMultiplayerAfterPack){
+    returnToMultiplayerAfterPack = false;
+    skipEditForPublicPack = false;
+    $("#mpNoPackHint").style.display = "none";
+    showScreen("multiplayer");
+  } else if (skipEditForPublicPack){
+    skipEditForPublicPack = false;
+    startDubbing();
+  } else {
+    showScreen("segments");
+  }
+}
+
+/* =========================================================
+   ESPORTA / IMPORTA PACK (.cvpack)
+   Non esiste un server centrale che ospita i pack: il file
+   .cvpack impacchetta video + testi + personaggi in un unico
+   file binario che si può condividere come qualsiasi altro
+   file (drive, chat, chiavetta...) e chiunque lo importa lo
+   ritrova pronto da giocare, anche per una stanza multiplayer.
+========================================================= */
+const CVPACK_MAGIC = "CVPK1";
+
+$("#btnExportPack").addEventListener("click", async () => {
+  if (!sourceFile){ toast("Carica prima un video."); return; }
+  try{
+    loading("Preparo il pack da esportare…", "Impacchetto video, testi e personaggi in un unico file.");
+    const videoBuf = await sourceFile.arrayBuffer();
+    const header = {
+      packMeta,
+      characters,
+      lines: lines.map(l => ({ id:l.id, start:l.start, end:l.end, text:l.text, characterId:l.characterId, manual:!!l.manual })),
+      videoMime: sourceFile.type || "video/mp4",
+      videoName: sourceFile.name || "video.mp4"
+    };
+    const headerBytes = new TextEncoder().encode(JSON.stringify(header));
+    const lenBytes = new Uint8Array(4);
+    new DataView(lenBytes.buffer).setUint32(0, headerBytes.byteLength, true);
+    const magicBytes = new TextEncoder().encode(CVPACK_MAGIC);
+    const blob = new Blob([magicBytes, lenBytes, headerBytes, videoBuf], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = (packMeta.name || "choicer-voicer-pack").replace(/[^\w\- ]+/g,"").trim() + ".cvpack";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    stopLoading();
+    toast("Pack esportato: condividi il file .cvpack con chi vuoi che lo usi.");
+  } catch(err){
+    stopLoading();
+    toast("Errore durante l'esportazione: " + err.message);
+  }
+});
+
+async function parseCvPackFile(file){
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  const magic = new TextDecoder().decode(bytes.slice(0, CVPACK_MAGIC.length));
+  if (magic !== CVPACK_MAGIC) throw new Error("Questo file non è un .cvpack valido.");
+  let offset = CVPACK_MAGIC.length;
+  const headerLen = new DataView(buf, offset, 4).getUint32(0, true);
+  offset += 4;
+  const headerBytes = bytes.slice(offset, offset + headerLen);
+  const header = JSON.parse(new TextDecoder().decode(headerBytes));
+  offset += headerLen;
+  const videoBytes = bytes.slice(offset);
+  const videoBlob = new Blob([videoBytes], { type: header.videoMime || "video/mp4" });
+  const videoFile = new File([videoBlob], header.videoName || "video.mp4", { type: header.videoMime || "video/mp4" });
+  return { header, videoFile };
+}
+
+async function loadCvPack(file){
+  try{
+    loading("Importo il pack…", "Leggo video, testi e personaggi dal file .cvpack.");
+    const { header, videoFile } = await parseCvPackFile(file);
+    sourceFile = videoFile;
+    sourceVideoUrl = null;
+    packMeta = header.packMeta || { name: file.name.replace(/\.cvpack$/,""), creator:"" };
+    characters = header.characters || [];
+    lines = (header.lines || []).map(l => ({ ...l, recording:null }));
+    $("#packNameInput").value = packMeta.name || "";
+    $("#packCreatorInput").value = packMeta.creator || "";
+    buildCharChips();
+    buildSegmentsReview();
+    stopLoading();
+    finishSegmentation(videoFile, `Pack importato: ${lines.length} battute pronte.`);
+    toast("Pack importato con successo.");
+  } catch(err){
+    stopLoading();
+    toast("Errore nell'importazione del pack: " + err.message);
+  }
+}
+
+$("#btnImportPackTile").addEventListener("click", () => $("#cvpackInput").click());
+$("#cvpackInput").addEventListener("change", (e) => {
+  const f = e.target.files[0];
+  if (f) loadCvPack(f);
+});
+
+/* =========================================================
+   LIBRERIA PACK PRONTI
+   Se accanto a index.html esiste una cartella "packs/" con un
+   file "packs.json" (array di { name, file, creator, description }),
+   qui sotto compare una lista di pack caricabili con un click, senza
+   dover ogni volta scegliere manualmente il file .cvpack.
+   packs.json esempio:
+   [ { "name":"Rissa al bar", "file":"rissa-al-bar.cvpack", "description":"3 personaggi, bar" } ]
+   Su file:// il fetch fallisce sempre (stesso limite già segnalato
+   altrove nell'app): la libreria semplicemente resta nascosta.
+========================================================= */
+async function loadCvPackFromUrl(url, displayName, btn){
+  try{
+    if (btn){ btn.disabled = true; btn.textContent = "Carico…"; }
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buf = await res.arrayBuffer();
+    const file = new File([buf], displayName || url.split("/").pop(), { type:"application/octet-stream" });
+    await loadCvPack(file);
+  } catch(err){
+    toast("Non riesco a caricare questo pack pronto: " + err.message);
+  } finally {
+    if (btn){ btn.disabled = false; btn.textContent = "Carica →"; }
+  }
+}
+
+async function initPackLibrary(){
+  try{
+    const res = await fetch("packs/packs.json");
+    if (!res.ok) return; // nessuna libreria configurata, va bene così
+    const list = await res.json();
+    if (!Array.isArray(list) || !list.length) return;
+
+    const block = $("#libraryBlock");
+    const wrap = $("#libraryList");
+    wrap.innerHTML = "";
+    list.forEach(entry => {
+      if (!entry || !entry.file) return;
+      const row = document.createElement("div");
+      row.className = "lib-card";
+      row.innerHTML = `
+        <div>
+          <div class="lib-name">${escapeHtml(entry.name || entry.file)}</div>
+          <div class="lib-desc">${escapeHtml(entry.description || (entry.creator ? "di " + entry.creator : ""))}</div>
+        </div>
+        <button type="button">Carica →</button>
+      `;
+      const btn = row.querySelector("button");
+      btn.addEventListener("click", () => loadCvPackFromUrl("packs/" + entry.file, entry.name, btn));
+      wrap.appendChild(row);
+    });
+    block.style.display = "block";
+  } catch(err){
+    // niente cartella packs/, o JSON non valido: nessun problema, si ignora silenziosamente
+  }
+}
+initPackLibrary();
+
+/* =========================================================
+   MODPACK PUBBLICI (Netlify Function + Netlify Blobs)
+   Chiunque può proporre il proprio pack attivo come "pubblico": finisce
+   in attesa di approvazione manuale (moderazione minima) e diventa
+   visibile a tutti solo dopo che qualcuno con la password lo approva.
+   Una volta approvato, caricarlo è identico a caricare qualsiasi altro
+   pack: entra come "pack attivo" e da lì funziona anche in una stanza
+   multiplayer esattamente come un pack locale (il video/testi/personaggi
+   vengono comunque inviati peer-to-peer da chi crea la stanza).
+========================================================= */
+const MODPACKS_ENDPOINT = "/api/modpacks";
+
+function arrayBufferToBase64(buf){
+  let binary = "";
+  const bytes = new Uint8Array(buf);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize){
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function setProposeStatus(msg, isErr){
+  const el = $("#proposeStatus");
+  el.style.display = msg ? "block" : "none";
+  el.textContent = msg || "";
+  el.classList.toggle("err", !!isErr);
+}
+
+// estrae un frame del video come immagine jpeg (data URL), per dare un
+// colpo d'occhio sulla scena nella libreria pack pubblici — non usa
+// clipVideo (l'elemento della Dub Stage) per non interferire con quello.
+function captureVideoThumbnail(file, atTime){
+  return new Promise((resolve) => {
+    try{
+      const url = URL.createObjectURL(file);
+      const v = document.createElement("video");
+      v.muted = true;
+      v.playsInline = true;
+      v.preload = "auto";
+      v.src = url;
+      let done = false;
+      const cleanup = () => { URL.revokeObjectURL(url); };
+      const finish = (result) => { if (done) return; done = true; cleanup(); resolve(result); };
+      const safetyTimeout = setTimeout(() => finish(null), 8000);
+      v.addEventListener("loadedmetadata", () => {
+        const t = Math.min(Math.max(atTime || 0, 0), Math.max(v.duration - 0.05, 0));
+        v.currentTime = t;
+      }, { once:true });
+      v.addEventListener("seeked", () => {
+        try{
+          const targetW = 320;
+          const scale = targetW / (v.videoWidth || targetW);
+          const canvas = document.createElement("canvas");
+          canvas.width = targetW;
+          canvas.height = Math.round((v.videoHeight || 180) * scale);
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+          clearTimeout(safetyTimeout);
+          finish(canvas.toDataURL("image/jpeg", 0.72));
+        } catch(e){
+          clearTimeout(safetyTimeout);
+          finish(null);
+        }
+      }, { once:true });
+      v.addEventListener("error", () => { clearTimeout(safetyTimeout); finish(null); }, { once:true });
+    } catch(e){
+      resolve(null);
+    }
+  });
+}
+
+$("#btnProposePublic").addEventListener("click", async () => {
+  if (!sourceFile){ toast("Carica prima un video."); return; }
+  const name = (packMeta.name || "").trim();
+  if (!name){ toast("Dai un nome al pack prima di proporlo (campo \"Nome del pack\")."); return; }
+
+  const btn = $("#btnProposePublic");
+  btn.disabled = true;
+  setProposeStatus("Preparo il pack da inviare…", false);
+  try{
+    // stesso identico impacchettamento usato per l'export .cvpack, solo che
+    // invece di scaricarlo lo mandiamo alla funzione come base64.
+    const videoBuf = await sourceFile.arrayBuffer();
+    const header = {
+      packMeta,
+      characters,
+      lines: lines.map(l => ({ id:l.id, start:l.start, end:l.end, text:l.text, characterId:l.characterId, manual:!!l.manual })),
+      videoMime: sourceFile.type || "video/mp4",
+      videoName: sourceFile.name || "video.mp4"
+    };
+    const headerBytes = new TextEncoder().encode(JSON.stringify(header));
+    const lenBytes = new Uint8Array(4);
+    new DataView(lenBytes.buffer).setUint32(0, headerBytes.byteLength, true);
+    const magicBytes = new TextEncoder().encode(CVPACK_MAGIC);
+    const packBuf = await new Blob([magicBytes, lenBytes, headerBytes, videoBuf]).arrayBuffer();
+
+    // frame di anteprima: prendiamo il centro della prima battuta doppiabile,
+    // così anche solo aprendo la libreria pubblica si capisce a colpo
+    // d'occhio di che scena si tratta, senza dover scaricare il pack.
+    setProposeStatus("Preparo l'anteprima…", false);
+    const firstDubbable = lines.find(l => l.start !== undefined && l.start !== null);
+    const thumbAt = firstDubbable ? (firstDubbable.start + firstDubbable.end) / 2 : 1;
+    const thumbnailDataUrl = await captureVideoThumbnail(sourceFile, thumbAt);
+
+    setProposeStatus("Invio in corso… (i pack grandi possono richiedere un momento)", false);
+    const res = await fetch(MODPACKS_ENDPOINT + "?action=propose", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        creator: (packMeta.creator || "").trim(),
+        description: ($("#packDescInput").value || "").trim(),
+        dataBase64: arrayBufferToBase64(packBuf),
+        thumbnailDataUrl: thumbnailDataUrl || undefined,
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    setProposeStatus("Pubblicato! È già visibile a tutti nella libreria pubblica.", false);
+    toast("Pack pubblicato!");
+    await initPublicModpackLibrary();
+  } catch(err){
+    setProposeStatus("Errore: " + err.message, true);
+    toast("Non sono riuscito a proporre il pack: " + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+async function loadPublicModpackById(id, btn){
+  try{
+    if (btn){ btn.disabled = true; btn.textContent = "Carico…"; }
+    const res = await fetch(`${MODPACKS_ENDPOINT}?action=get&id=${encodeURIComponent(id)}`);
+    if (!res.ok){
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    const buf = await res.arrayBuffer();
+    const file = new File([buf], "modpack-pubblico.cvpack", { type: "application/octet-stream" });
+    // pack pubblico: chi lo apre deve solo doppiare, non modificare testi/personaggi
+    if (!returnToMultiplayerAfterPack) skipEditForPublicPack = true;
+    await loadCvPack(file);
+  } catch(err){
+    toast("Non riesco a caricare questo modpack pubblico: " + err.message);
+  } finally {
+    if (btn){ btn.disabled = false; btn.textContent = "Carica →"; }
+  }
+}
+
+async function initPublicModpackLibrary(){
+  const wrap = $("#publicLibraryList");
+  wrap.innerHTML = `<div style="font-family:var(--mono);font-size:12px;color:var(--dim);">Carico i pack pubblici…</div>`;
+  try{
+    const res = await fetch(MODPACKS_ENDPOINT + "?action=list");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const list = await res.json();
+    wrap.innerHTML = "";
+
+    if (!Array.isArray(list) || !list.length){
+      wrap.innerHTML = `<div style="font-family:var(--mono);font-size:12px;color:var(--dim);">Nessun pack pubblico ancora. Puoi proporre il tuo dalla schermata "Testi" del tuo pack ("↑ Proponi come pack pubblico").</div>`;
+      return;
+    }
+
+    list.forEach(entry => {
+      if (!entry || !entry.id) return;
+      const sizeTxt = entry.size ? ` · ${(entry.size/1024/1024).toFixed(1)}MB` : "";
+      const row = document.createElement("div");
+      row.className = "lib-card";
+      const thumbHtml = entry.thumbnail
+        ? `<img src="${entry.thumbnail}" alt="Anteprima scena" style="width:72px;height:44px;object-fit:cover;border:1px solid var(--line);flex:none;background:#000;">`
+        : `<div style="width:72px;height:44px;flex:none;background:var(--panel-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;color:var(--dim);">no preview</div>`;
+      row.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+          ${thumbHtml}
+          <div style="min-width:0;">
+            <div class="lib-name">${escapeHtml(entry.name || "Senza nome")}</div>
+            <div class="lib-desc">${escapeHtml(entry.description || (entry.creator ? "di " + entry.creator : "Pack pubblico"))}${sizeTxt}</div>
+          </div>
+        </div>
+        <button type="button">Carica →</button>
+      `;
+      const btn = row.querySelector("button");
+      btn.addEventListener("click", () => loadPublicModpackById(entry.id, btn));
+      wrap.appendChild(row);
+    });
+  } catch(err){
+    // la funzione potrebbe non essere ancora deployata/configurata su Netlify:
+    // lo diciamo chiaramente invece di far sparire la sezione senza spiegazioni.
+    wrap.innerHTML = `<div style="font-family:var(--mono);font-size:12px;color:var(--coral);">Non riesco a contattare la libreria pubblica (${escapeHtml(err.message)}). Verifica che la funzione "/api/modpacks" sia deployata e configurata correttamente.</div>`;
+  }
+}
+$("#btnRefreshPublicLibrary").addEventListener("click", initPublicModpackLibrary);
+initPublicModpackLibrary();
+
+/* ---------- pannello di moderazione, nascosto dietro ?moderate=1 ---------- */
+let modPassword = null;
+
+async function modFetch(action, opts={}){
+  const res = await fetch(`${MODPACKS_ENDPOINT}?action=${action}`, {
+    ...opts,
+    headers: { ...(opts.headers||{}), "X-Mod-Password": modPassword || "" }
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+async function refreshModPanel(){
+  const wrap = $("#modPanelList");
+  try{
+    const list = await modFetch("pending");
+    wrap.innerHTML = "";
+    if (!list.length){
+      wrap.innerHTML = `<div style="font-family:var(--mono);font-size:12px;color:var(--dim);">Nessun pack in attesa.</div>`;
+      return;
+    }
+    list.forEach(entry => {
+      const sizeTxt = entry.size ? `${(entry.size/1024/1024).toFixed(1)}MB` : "";
+      const row = document.createElement("div");
+      row.className = "lib-card";
+      row.innerHTML = `
+        <div>
+          <div class="lib-name">${escapeHtml(entry.name || "Senza nome")}</div>
+          <div class="lib-desc">${escapeHtml(entry.description || "")}${entry.creator ? " · di " + escapeHtml(entry.creator) : ""} · ${sizeTxt}</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" data-act="approve" style="background:var(--teal);">Approva</button>
+          <button type="button" data-act="reject" style="background:var(--coral);color:var(--paper);">Scarta</button>
+        </div>
+      `;
+      row.querySelector('[data-act="approve"]').addEventListener("click", async (e) => {
+        e.target.disabled = true;
+        try{ await modFetch("approve", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id: entry.id }) }); toast("Approvato."); await refreshModPanel(); await initPublicModpackLibrary(); }
+        catch(err){ toast("Errore: " + err.message); e.target.disabled = false; }
+      });
+      row.querySelector('[data-act="reject"]').addEventListener("click", async (e) => {
+        e.target.disabled = true;
+        try{ await modFetch("reject", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id: entry.id }) }); toast("Scartato."); await refreshModPanel(); }
+        catch(err){ toast("Errore: " + err.message); e.target.disabled = false; }
+      });
+      wrap.appendChild(row);
+    });
+  } catch(err){
+    wrap.innerHTML = `<div class="status-line err">Errore: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+if (new URLSearchParams(location.search).get("moderate") === "1"){
+  modPassword = prompt("Password di moderazione:");
+  if (modPassword){
+    $("#modPanel").style.display = "block";
+    refreshModPanel();
+  }
+}
+
+
+function parseDuration(logs){
+  for (const line of logs){
+    const m = line.match(/Duration:\s*(\d+):(\d+):(\d+\.?\d*)/);
+    if (m) return (+m[1])*3600 + (+m[2])*60 + parseFloat(m[3]);
+  }
+  return null;
+}
+
+/* =========================================================
+   SEGMENTS REVIEW SCREEN
+========================================================= */
+const MIN_SEG_DUR = 0.1; // durata minima di una battuta (secondi)
+
+// Dopo aver modificato la FINE di lines[idx], spinge in avanti tutte le
+// battute successive che ora si sovrappongono, finché la timeline torna
+// coerente. Senza questo, allargare una clip (es. 0.5 → 17s) lasciava le
+// battute più lontane con i vecchi orari, sovrapposte a quella modificata.
+function pushForwardFrom(idx){
+  for (let k = idx; k < lines.length - 1; k++){
+    const cur = lines[k], next = lines[k+1];
+    if (cur.start === undefined || cur.start === null) continue;
+    if (next.start === undefined || next.start === null) continue;
+    if (next.start < cur.end){
+      next.start = cur.end;
+      if (next.end < next.start + MIN_SEG_DUR){
+        next.end = next.start + MIN_SEG_DUR; // battuta "schiacciata": va avanti anche lei
+      } else {
+        break; // la fine di next non cambia, quindi il resto della catena è già coerente
+      }
+    } else {
+      break; // nessuna sovrapposizione, non serve propagare oltre
+    }
+  }
+}
+
+// Speculare a pushForwardFrom: dopo aver modificato l'INIZIO di lines[idx],
+// tira indietro tutte le battute precedenti che ora si sovrappongono.
+function pullBackwardFrom(idx){
+  for (let k = idx; k > 0; k--){
+    const cur = lines[k], prev = lines[k-1];
+    if (cur.start === undefined || cur.start === null) continue;
+    if (prev.start === undefined || prev.start === null) continue;
+    if (prev.end > cur.start){
+      prev.end = cur.start;
+      if (prev.end < prev.start + MIN_SEG_DUR){
+        prev.start = Math.max(0, prev.end - MIN_SEG_DUR);
+      } else {
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+}
+
+function buildSegmentsReview(){
+  // ad ogni rebuild i vecchi elementi <video> di anteprima vengono rimpiazzati:
+  // azzeriamo lo stato di riproduzione così non resta un riferimento a un
+  // elemento non più nel DOM.
+  stopAllPreviews();
+  const list = $("#segList");
+  list.innerHTML = "";
+  $("#segCountLabel").textContent = `${lines.length} battute trovate`;
+  const charOptions = (selectedId) => {
+    let opts = `<option value="">— nessun personaggio —</option>`;
+    opts += characters.map(c => `<option value="${c.id}" ${c.id===selectedId?"selected":""}>${escapeHtml(c.name)}</option>`).join("");
+    return opts;
+  };
+  lines.forEach((line, i) => {
+    const row = document.createElement("div");
+    row.className = "seg-row";
+    const ch = getCharacter(line.characterId);
+    const hasClip = line.start !== undefined && line.start !== null;
+    row.innerHTML = `
+      <div class="num">${String(i+1).padStart(2,"0")}</div>
+      <div class="seg-preview" data-preview="${i}">
+        ${hasClip
+          ? `<video muted playsinline preload="metadata" data-previewvideo="${i}"></video>
+             ${ch ? `<div class="seg-preview-charlbl" style="color:${ch.color};">${escapeHtml(ch.name)}</div>` : ""}
+             <button type="button" class="seg-preview-play" data-previewplay="${i}" title="Anteprima di questa battuta">▶</button>`
+          : `<div class="noclip">nessuna clip<br>(riga manuale)</div>`
+        }
+      </div>
+      <div class="seg-main">
+        <textarea data-idx="${i}" placeholder="Scrivi il testo di questa battuta...">${escapeHtml(line.text)}</textarea>
+        <select class="char-select" data-charidx="${i}" style="${ch ? `border-color:${ch.color};color:${ch.color};` : ""}">
+          ${charOptions(line.characterId)}
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+        <div class="seg-timing">
+          <span class="tlbl">da</span>
+          <input type="number" step="0.1" min="0" data-startidx="${i}" value="${hasClip ? line.start.toFixed(2) : ""}" ${hasClip?"":"disabled"}>
+          <span class="tlbl">a</span>
+          <input type="number" step="0.1" min="0" data-endidx="${i}" value="${hasClip ? line.end.toFixed(2) : ""}" ${hasClip?"":"disabled"}>
+          <span class="tlbl">${(line.end-line.start).toFixed(1)}s</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-split" data-split="${i}" ${hasClip?"":"disabled"} title="Divide questa battuta in due, tagliando a metà tempo e testo">✂ Dividi</button>
+          <button class="del" data-del="${i}" title="Elimina riga">✕</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+  list.querySelectorAll("textarea").forEach(ta => {
+    ta.addEventListener("input", () => {
+      lines[+ta.dataset.idx].text = ta.value;
+    });
+  });
+  list.querySelectorAll("select.char-select").forEach(sel => {
+    sel.addEventListener("change", () => {
+      lines[+sel.dataset.charidx].characterId = sel.value || null;
+      buildSegmentsReview();
+    });
+  });
+  list.querySelectorAll("[data-del]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = +btn.dataset.del;
+      lines.splice(idx, 1);
+      buildSegmentsReview();
+    });
+  });
+  // chi carica la clip può correggere manualmente dove inizia/finisce ogni battuta,
+  // così ha spazio per scrivere bene la frase invece di essere legato al taglio automatico.
+  // Il confine è condiviso con la battuta adiacente: se sposti l'inizio della riga 2,
+  // la fine della riga 1 si sposta insieme. Se il nuovo taglio è molto più ampio
+  // (es. 0.5 → 17s) può "mangiarsi" anche più di una battuta successiva: non basta
+  // aggiustare solo il vicino immediato, bisogna propagare la modifica in cascata
+  // finché la timeline torna coerente (ogni riga inizia dove finisce la precedente).
+  list.querySelectorAll("[data-startidx]").forEach(inp => {
+    inp.addEventListener("change", () => {
+      const idx = +inp.dataset.startidx;
+      const line = lines[idx];
+      let v = parseFloat(inp.value);
+      if (isNaN(v) || v < 0) v = 0;
+      if (v >= line.end - MIN_SEG_DUR) v = Math.max(0, line.end - MIN_SEG_DUR);
+      line.start = v;
+      pullBackwardFrom(idx);
+      buildSegmentsReview();
+    });
+  });
+  list.querySelectorAll("[data-endidx]").forEach(inp => {
+    inp.addEventListener("change", () => {
+      const idx = +inp.dataset.endidx;
+      const line = lines[idx];
+      let v = parseFloat(inp.value);
+      if (isNaN(v)) v = line.start + 1;
+      if (v <= line.start + MIN_SEG_DUR) v = line.start + MIN_SEG_DUR;
+      line.end = v;
+      pushForwardFrom(idx);
+      buildSegmentsReview();
+    });
+  });
+  list.querySelectorAll("[data-split]").forEach(btn => {
+    btn.addEventListener("click", () => splitLine(+btn.dataset.split));
+  });
+
+  // anteprima video per ogni battuta: mostra un fotogramma preso all'inizio
+  // della clip, e con il pulsante ▶ si sente esattamente il pezzo tagliato
+  // (start → end), utile per controllare che il taglio automatico sia giusto
+  // prima di passare al doppiaggio.
+  list.querySelectorAll("[data-previewvideo]").forEach(v => {
+    const idx = +v.dataset.previewvideo;
+    const line = lines[idx];
+    if (!ensureSourceVideoLoaded()) return;
+    v.src = sourceVideoUrl;
+    v.addEventListener("loadedmetadata", () => { v.currentTime = line.start; }, { once:true });
+  });
+  list.querySelectorAll("[data-previewplay]").forEach(btn => {
+    btn.addEventListener("click", () => togglePreviewPlay(+btn.dataset.previewplay));
+  });
+}
+
+/* ---------- anteprima per-battuta nella schermata di revisione ---------- */
+let activePreviewIdx = null;
+let previewWatchHandle = null;
+function togglePreviewPlay(idx){
+  if (activePreviewIdx !== null && activePreviewIdx !== idx) stopAllPreviews();
+  if (activePreviewIdx === idx){ stopAllPreviews(); return; }
+
+  const video = document.querySelector(`[data-previewvideo="${idx}"]`);
+  const line = lines[idx];
+  if (!video || !line) return;
+
+  video.muted = false;
+  video.volume = 1;
+  video.currentTime = line.start;
+  video.play().catch(() => {});
+  document.querySelector(`[data-preview="${idx}"]`)?.classList.add("playing");
+  const btn = document.querySelector(`[data-previewplay="${idx}"]`);
+  if (btn) btn.textContent = "❚❚";
+  activePreviewIdx = idx;
+
+  if (previewWatchHandle) clearInterval(previewWatchHandle);
+  previewWatchHandle = setInterval(() => {
+    if (video.paused || video.currentTime >= line.end - 0.02) stopAllPreviews();
+  }, 60);
+}
+function stopAllPreviews(){
+  if (previewWatchHandle){ clearInterval(previewWatchHandle); previewWatchHandle = null; }
+  if (activePreviewIdx === null) return;
+  const idx = activePreviewIdx;
+  activePreviewIdx = null;
+  const video = document.querySelector(`[data-previewvideo="${idx}"]`);
+  const line = lines[idx];
+  if (video){
+    video.pause();
+    video.muted = true;
+    if (line) video.currentTime = line.start;
+  }
+  document.querySelector(`[data-preview="${idx}"]`)?.classList.remove("playing");
+  const btn = document.querySelector(`[data-previewplay="${idx}"]`);
+  if (btn) btn.textContent = "▶";
+}
+
+// Divide una battuta in due a metà del tempo, e prova a spezzare anche il
+// testo a metà (sulla parola più vicina) così chi scrive può sistemare le
+// due frasi separatamente invece di dover far stare tutto in una battuta sola.
+function splitLine(idx){
+  const line = lines[idx];
+  if (line.start === undefined || line.start === null) return;
+  const mid = (line.start + line.end) / 2;
+  if (mid - line.start < 0.15 || line.end - mid < 0.15){
+    toast("Questa battuta è troppo corta per essere divisa ulteriormente.");
+    return;
+  }
+  const words = (line.text || "").split(/\s+/).filter(Boolean);
+  const half = Math.ceil(words.length / 2) || 0;
+  const textA = words.slice(0, half).join(" ");
+  const textB = words.slice(half).join(" ");
+
+  const first = { ...line, end: mid, text: textA || line.text };
+  const second = { ...line, id: (line.id ?? idx) + 0.5, start: mid, text: textB || "" };
+  lines.splice(idx, 1, first, second);
+  buildSegmentsReview();
+  toast("Battuta divisa in due: aggiusta il taglio con i campi «da / a» se serve.");
+}
+$("#btnAddSeg").addEventListener("click", () => {
+  const last = lines[lines.length-1];
+  const start = last ? last.end : 0;
+  lines.push({ id: lines.length, start, end: start+1, text: `Battuta ${lines.length+1}`, segFileName:null, segBlobUrl:null, recording:null, manual:true, characterId:null });
+  buildSegmentsReview();
+  toast("Riga aggiunta: punta a un secondo del video subito dopo l'ultima battuta. Puoi aggiustare testo e personaggio, il taglio preciso avviene al montaggio finale.");
+});
+$("#btnAddChar").addEventListener("click", () => addCharacter());
+$("#packNameInput").addEventListener("input", (e) => {
+  packMeta.name = e.target.value;
+  $("#activePackName").textContent = packMeta.name || "—";
+});
+$("#packCreatorInput").addEventListener("input", (e) => {
+  packMeta.creator = e.target.value;
+  updateActivePackMeta();
+});
+function updateActivePackMeta(){
+  const base = `${lines.length} battute`;
+  $("#activePackLen").textContent = packMeta.creator ? `${base} · by ${packMeta.creator}` : base;
+}
+$("#btnStartDub").addEventListener("click", startDubbing);
+$("#btnSinglePlayer").addEventListener("click", startDubbing);
+
+function escapeHtml(s){
+  return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function buildWave(sel, n){
+  const el = $(sel);
+  el.innerHTML = "";
+  for (let i=0;i<n;i++){
+    const bar = document.createElement("i");
+    const h = 20 + Math.round(Math.sin(i*0.7)*10 + Math.random()*14);
+    bar.style.height = Math.max(6,h) + "%";
+    el.appendChild(bar);
+  }
+}
+
+// disegna lo spettro con valori REALI (0..1 ciascuno), invece delle barre
+// decorative casuali di buildWave qui sopra.
+//
+// I valori grezzi (RMS normalizzato) hanno spesso pause quasi a zero tra
+// una parola e l'altra: renderizzate 1:1 diventano dei puntini piatti
+// (il "prima" di questo file). Una curva a radice quadrata comprime il
+// range dinamico — alza visibilmente le parti silenziose senza schiacciare
+// le più forti — dando l'aspetto continuo e "pieno" di una vera forma
+// d'onda audio (stile memo vocale) invece che un misuratore a barre.
+function renderWaveBars(sel, values){
+  const el = $(sel);
+  if (!el) return;
+  el.innerHTML = "";
+  values.forEach(v => {
+    const clamped = Math.min(1, Math.max(0, v));
+    const shaped = Math.sqrt(clamped); // compressione: alza i valori bassi, non appiattisce quelli alti
+    const bar = document.createElement("i");
+    const h = Math.max(8, Math.round(shaped * 100));
+    bar.style.height = h + "%";
+    el.appendChild(bar);
+  });
+}
+
+/* ---------- spettro reale + punteggio per battuta ----------
+   Confronta l'inviluppo di volume (RMS) dell'audio originale della
+   battuta con quello della tua registrazione: più i due "profili" di
+   volume/ritmo si assomigliano, più alto è il punteggio. */
+let decodedSourceAudioBuffer = null;
+let decodedSourceAudioForFile = null;
+
+async function getDecodedSourceAudio(){
+  if (!sourceFile) return null;
+  if (decodedSourceAudioBuffer && decodedSourceAudioForFile === sourceFile) return decodedSourceAudioBuffer;
+  try{
+    const buf = await sourceFile.arrayBuffer();
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const audioBuffer = await ctx.decodeAudioData(buf.slice(0));
+    ctx.close();
+    decodedSourceAudioBuffer = audioBuffer;
+    decodedSourceAudioForFile = sourceFile;
+    return audioBuffer;
+  } catch(e){
+    console.warn("Non riesco a decodificare l'audio originale per spettro/punteggio:", e);
+    return null;
+  }
+}
+
+function computeRmsEnvelope(audioBuffer, startSec, endSec, n){
+  const data = audioBuffer.getChannelData(0);
+  const sr = audioBuffer.sampleRate;
+  const startIdx = Math.max(0, Math.floor(startSec * sr));
+  const endIdx = Math.min(data.length, Math.ceil(endSec * sr));
+  const len = Math.max(1, endIdx - startIdx);
+  const bucketSize = Math.max(1, Math.floor(len / n));
+  const env = [];
+  for (let b=0; b<n; b++){
+    const bStart = startIdx + b*bucketSize;
+    const bEnd = Math.min(endIdx, bStart + bucketSize);
+    let sum = 0, count = 0;
+    for (let i=bStart; i<bEnd; i++){ sum += data[i]*data[i]; count++; }
+    env.push(count ? Math.sqrt(sum/count) : 0);
+  }
+  return env;
+}
+
+// maxDurationSec: la registrazione include SEMPRE qualche secondo in più
+// rispetto alla battuta vera e propria (il countdown/margine iniziale e
+// soprattutto RECORD_GRACE_SECONDS di "coda" lasciata per finire di parlare
+// dopo la fine della clip). Se calcoliamo l'inviluppo su TUTTA la durata
+// registrata, quella coda quasi silenziosa si prende una fetta di bucket
+// che nell'originale non esiste: il parlato vero finisce "compresso" nei
+// primi bucket e il confronto con l'originale (che copre solo [start,end])
+// si sfasa sempre di più verso la fine — risultato: le due forme d'onda
+// sembrano "diverse" anche quando la voce corrisponde bene, e il punteggio
+// (che usa la stessa logica di allineamento) ne risente. Tagliando la
+// registrazione alla durata della battuta originale, i bucket restano
+// allineati nel tempo.
+async function computeRecordingEnvelope(blob, n, maxDurationSec){
+  const buf = await blob.arrayBuffer();
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  try{
+    const audioBuffer = await ctx.decodeAudioData(buf.slice(0));
+    const endSec = (typeof maxDurationSec === "number" && maxDurationSec > 0)
+      ? Math.min(audioBuffer.duration, maxDurationSec)
+      : audioBuffer.duration;
+    return computeRmsEnvelope(audioBuffer, 0, endSec, n);
+  } finally {
+    ctx.close();
+  }
+}
+
+function normalizeEnvelope(env){
+  const max = Math.max(...env, 1e-6);
+  return env.map(v => v / max);
+}
+
+// ---------------------------------------------------------------
+// SPETTRO (bande di frequenza) per il punteggio.
+//
+// Prima il punteggio guardava solo il volume nel tempo (RMS): due voci con
+// lo stesso ritmo/pause finivano quasi sempre sopra 80 anche se il timbro
+// era completamente diverso. Ora confrontiamo la FORMA dello spettro
+// (dove si concentra l'energia tra le bande di frequenza) bucket per
+// bucket nel tempo — cattura meglio quanto le due voci si somigliano
+// davvero, non solo se parlano "con lo stesso ritmo".
+// ---------------------------------------------------------------
+const SCORE_BUCKETS = 20;       // risoluzione temporale usata SOLO per il punteggio (non per le barre estetiche del waveform)
+const SPECTRUM_BANDS = 12;      // quante bande di frequenza per bucket
+const SPECTRUM_MIN_HZ = 120;
+const SPECTRUM_MAX_HZ = 5000;
+
+function spectrumBandFrequencies(){
+  const freqs = [];
+  const logMin = Math.log(SPECTRUM_MIN_HZ), logMax = Math.log(SPECTRUM_MAX_HZ);
+  for (let i=0; i<SPECTRUM_BANDS; i++){
+    // bande distribuite logaritmicamente: l'orecchio percepisce le
+    // frequenze in scala log, non lineare, quindi così le bande "gravi"
+    // e quelle "acute" pesano in modo più equilibrato nel confronto.
+    const t = SPECTRUM_BANDS === 1 ? 0 : i/(SPECTRUM_BANDS-1);
+    freqs.push(Math.exp(logMin + t*(logMax-logMin)));
+  }
+  return freqs;
+}
+const SPECTRUM_FREQS = spectrumBandFrequencies();
+
+// Confini tra bande consecutive = media geometrica dei due centri (dato
+// che i centri sono log-spaziati, questo divide equamente lo spazio in
+// scala logaritmica tra una banda e la successiva).
+function spectrumBandEdges(){
+  const edges = [SPECTRUM_MIN_HZ];
+  for (let i=1; i<SPECTRUM_BANDS; i++) edges.push(Math.sqrt(SPECTRUM_FREQS[i-1]*SPECTRUM_FREQS[i]));
+  edges.push(SPECTRUM_MAX_HZ);
+  return edges;
+}
+const SPECTRUM_EDGES = spectrumBandEdges();
+
+// Dimensione fissa della FFT usata per ogni bucket temporale. Con una
+// singola frequenza campionata via Goertzel la risoluzione di una finestra
+// di analisi lunga è troppo fine: un tono a 300Hz non "risponde" quasi per
+// niente a una banda centrata a 332Hz, anche se sono vicinissime. Una FFT
+// vera e propria, con l'energia sommata per RANGE di frequenza (non un
+// singolo punto esatto), non ha questo problema.
+const FFT_SIZE = 1024;
+
+// FFT radix-2 iterativa (Cooley-Tukey), input reale. Restituisce le
+// magnitudini per i bin da 0 a FFT_SIZE/2 (lo spettro utile per audio reale,
+// il resto è simmetrico e ridondante).
+function fftMagnitudes(real){
+  const n = real.length;
+  const re = Float64Array.from(real);
+  const im = new Float64Array(n);
+  for (let i=1, j=0; i<n; i++){
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j){
+      let t = re[i]; re[i]=re[j]; re[j]=t;
+      t = im[i]; im[i]=im[j]; im[j]=t;
+    }
+  }
+  for (let len=2; len<=n; len<<=1){
+    const ang = -2*Math.PI/len;
+    const wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i=0; i<n; i+=len){
+      let curWr=1, curWi=0;
+      for (let j=0; j<len/2; j++){
+        const ur = re[i+j], ui = im[i+j];
+        const vr = re[i+j+len/2]*curWr - im[i+j+len/2]*curWi;
+        const vi = re[i+j+len/2]*curWi + im[i+j+len/2]*curWr;
+        re[i+j] = ur+vr; im[i+j] = ui+vi;
+        re[i+j+len/2] = ur-vr; im[i+j+len/2] = ui-vi;
+        const nwr = curWr*wr - curWi*wi;
+        const nwi = curWr*wi + curWi*wr;
+        curWr = nwr; curWi = nwi;
+      }
+    }
+  }
+  const half = n/2;
+  const mags = new Float64Array(half+1);
+  for (let i=0; i<=half; i++) mags[i] = Math.sqrt(re[i]*re[i] + im[i]*im[i]);
+  return mags;
+}
+
+// Spezza il segmento in SCORE_BUCKETS fette temporali e per ognuna calcola
+// un vettore di energie per banda di frequenza (sommando l'energia di tutti
+// i bin FFT che cadono in quel range, non un singolo punto): uno "spettro"
+// che descrive il timbro/l'intonazione di quell'istante, non solo il volume.
+function computeSpectralEnvelope(audioBuffer, startSec, endSec, n){
+  const data = audioBuffer.getChannelData(0);
+  const sr = audioBuffer.sampleRate;
+  const startIdx = Math.max(0, Math.floor(startSec * sr));
+  const endIdx = Math.min(data.length, Math.ceil(endSec * sr));
+  const len = Math.max(1, endIdx - startIdx);
+  const bucketSize = Math.max(1, Math.floor(len / n));
+  const binWidth = sr / FFT_SIZE;
+  const spectra = [];
+  for (let b=0; b<n; b++){
+    const bStart = startIdx + b*bucketSize;
+    const bEnd = Math.min(endIdx, bStart + bucketSize);
+    const chunkLen = Math.max(0, bEnd - bStart);
+    const take = Math.min(chunkLen, FFT_SIZE);
+    const offset = Math.floor((FFT_SIZE - take) / 2); // centra il pezzo disponibile nella finestra FFT
+    const windowed = new Float64Array(FFT_SIZE);
+    for (let i=0; i<take; i++){
+      // finestra di Hann: riduce gli artefatti dovuti al taglio netto ai bordi del bucket
+      const hann = take > 1 ? (0.5 - 0.5*Math.cos(2*Math.PI*i/(take-1))) : 1;
+      windowed[offset+i] = data[bStart+i] * hann;
+    }
+    const mags = fftMagnitudes(windowed);
+    const bands = new Array(SPECTRUM_BANDS).fill(0);
+    for (let k=0; k<mags.length; k++){
+      const f = k * binWidth;
+      if (f < SPECTRUM_MIN_HZ || f > SPECTRUM_MAX_HZ) continue;
+      let bi = 0;
+      while (bi < SPECTRUM_BANDS-1 && f >= SPECTRUM_EDGES[bi+1]) bi++;
+      bands[bi] += mags[k]*mags[k]; // energia = magnitudine al quadrato
+    }
+    spectra.push(bands);
+  }
+  return spectra;
+}
+
+// Norma L2 di un vettore-spettro: confrontiamo la FORMA dello spettro
+// (dove si concentra l'energia tra le bande), non il volume assoluto —
+// quello lo cattura già a parte il volume grezzo usato come peso sotto.
+function normalizeSpectrumVector(vec){
+  let norm = 0;
+  for (const v of vec) norm += v*v;
+  norm = Math.sqrt(norm);
+  if (norm < 1e-6) return vec.map(() => 0);
+  return vec.map(v => v/norm);
+}
+
+// Coseno tra due vettori già normalizzati L2 (il prodotto scalare è già il
+// coseno): 1 = spettri identici in forma, 0 = nessuna somiglianza.
+function spectrumCosineSimilarity(a, b){
+  let dot = 0;
+  for (let i=0; i<a.length; i++) dot += a[i]*b[i];
+  return Math.max(0, Math.min(1, dot));
+}
+
+async function decodeBlobToAudioBuffer(blob){
+  const buf = await blob.arrayBuffer();
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  try{
+    return await ctx.decodeAudioData(buf.slice(0));
+  } finally {
+    ctx.close();
+  }
+}
+
+// Spettro (bande di frequenza) della registrazione, usato per il punteggio.
+// Vedi commento su computeRecordingEnvelope: senza il taglio a maxDurationSec,
+// la coda di silenzio lasciata dopo la fine della clip (RECORD_GRACE_SECONDS)
+// sfasa i bucket rispetto all'originale e abbassa il punteggio artificialmente.
+async function computeRecordingSpectrum(blob, n, maxDurationSec){
+  const audioBuffer = await decodeBlobToAudioBuffer(blob);
+  const endSec = (typeof maxDurationSec === "number" && maxDurationSec > 0)
+    ? Math.min(audioBuffer.duration, maxDurationSec)
+    : audioBuffer.duration;
+  return computeSpectralEnvelope(audioBuffer, 0, endSec, n);
+}
+
+// 1-100: quanto lo SPETTRO (il timbro/l'intonazione) della registrazione
+// somiglia a quello dell'originale, bucket per bucket nel tempo. Ogni
+// bucket è pesato in base a quanta energia ha nell'originale, così le
+// pause/silenzi tra le parole non "regalano" punti solo perché sono
+// facili da eguagliare. Il punteggio resta "a curva" come nei giochi
+// musicali (un tentativo pessimo non crolla a 0, sembrerebbe un errore
+// più che un voto basso) ma qui la curva è più severa: una somiglianza
+// "media" non basta più per finire sempre sopra 80, il punteggio ora usa
+// davvero tutta la scala 40-100.
+// RIBILANCIATO: il punteggio dava quasi sempre voti bassi, non solo a chi
+// recitava male. Causa principale: il TIMBRO (spettro grezzo) pesava 0.55 e
+// per costruzione due voci diverse (es. maschile/femminile) che recitano la
+// stessa riga PERFETTAMENTE non avranno mai spettri simili — quindi anche
+// una dub ottima veniva penalizzata pesantemente solo perché la voce di chi
+// gioca non è quella dell'originale. Il RITMO invece è indipendente dal
+// timbro ed è il segnale più giusto per "quanto hai azzeccato la battuta":
+// ora pesa di più. Alzato anche il pavimento e resa la curva meno severa
+// (gamma 1.0 = lineare, non schiaccia più i punteggi medi verso il basso).
+const SCORE_FLOOR = 50;
+const SCORE_GAMMA = 1.0; // era 1.3 (e prima ancora 1.8): entrambe troppo severe sui punteggi medi
+function computeLineScore(specOriginal, specRecording){
+  const n = Math.min(specOriginal.length, specRecording.length);
+  if (!n) return SCORE_FLOOR;
+  let simSum = 0, weightSum = 0;
+  const energyOrig = [], energyRec = [];
+  for (let i=0; i<n; i++){
+    const origVec = specOriginal[i], recVec = specRecording[i];
+    const weight = origVec.reduce((s,v) => s+v, 0); // energia grezza del bucket originale
+    energyOrig.push(weight);
+    energyRec.push(recVec.reduce((s,v) => s+v, 0));
+    if (weight <= 1e-6) continue; // bucket silenzioso: non conta nel punteggio timbrico
+    const a = normalizeSpectrumVector(origVec);
+    const b = normalizeSpectrumVector(recVec);
+    simSum += spectrumCosineSimilarity(a, b) * weight;
+    weightSum += weight;
+  }
+  const timbreSim = weightSum > 0 ? simSum / weightSum : 0; // 0-1: quanto si somiglia il TIMBRO
+
+  // Il timbro (spettro grezzo) dipende molto dalla voce della persona, non
+  // solo da quanto ha "azzeccato" la battuta: due voci diverse che
+  // recitano perfettamente la stessa riga non avranno mai spettri identici.
+  // Il RITMO (dove cade energia/silenzio nel tempo) invece è indipendente
+  // dal timbro ed è proprio quello che rende una dub "buona": lo misuriamo
+  // con la correlazione tra gli andamenti di energia nel tempo.
+  const rhythmSim = normalizedCorrelation(energyOrig, energyRec);
+
+  const combined = 0.35*timbreSim + 0.65*rhythmSim; // era 0.55/0.45: il timbro penalizzava troppo le voci diverse dall'originale
+  const curved = SCORE_FLOOR + Math.pow(Math.max(0,combined), SCORE_GAMMA) * (100 - SCORE_FLOOR);
+  return Math.max(SCORE_FLOOR, Math.min(100, Math.round(curved)));
+}
+
+// Correlazione di Pearson tra due serie, riportata su scala 0-1 (0 = nessuna
+// relazione o anti-correlate, 1 = andamenti identici). Usata per confrontare
+// il RITMO (energia nel tempo) tra originale e registrazione.
+function normalizedCorrelation(a, b){
+  const n = Math.min(a.length, b.length);
+  if (!n) return 0;
+  const meanA = a.reduce((s,v)=>s+v,0)/n, meanB = b.reduce((s,v)=>s+v,0)/n;
+  let cov = 0, varA = 0, varB = 0;
+  for (let i=0; i<n; i++){
+    const da = a[i]-meanA, db = b[i]-meanB;
+    cov += da*db; varA += da*da; varB += db*db;
+  }
+  if (varA <= 1e-9 || varB <= 1e-9) return 0;
+  const corr = cov / Math.sqrt(varA*varB); // -1..1
+  return Math.max(0, corr); // anti-correlato = 0, non penalizziamo sotto il pavimento
+}
+
+const WAVE_BUCKETS = 96; // più barre = spettro più "realistico" e denso, come una vera forma d'onda
+let waveformRequestId = 0;
+
+// mostra lo spettro reale dell'audio originale per la battuta corrente
+// (fallback alle barre decorative se la battuta non ha una clip, o se la
+// decodifica dell'audio non riesce).
+async function renderOriginalWaveformForCurrentLine(){
+  const myId = ++waveformRequestId;
+  const line = lines[currentLineIndex];
+  if (!line || line.start === undefined || line.start === null){
+    buildWave("#waveOriginal", WAVE_BUCKETS);
+    return;
+  }
+  const audioBuffer = await getDecodedSourceAudio();
+  if (myId !== waveformRequestId) return; // nel frattempo si è cambiata battuta
+  if (!audioBuffer){ buildWave("#waveOriginal", WAVE_BUCKETS); return; }
+  const env = computeRmsEnvelope(audioBuffer, line.start, line.end, WAVE_BUCKETS);
+  renderWaveBars("#waveOriginal", normalizeEnvelope(env));
+}
+
+function updateLineScoreUI(){
+  const line = lines[currentLineIndex];
+  const scoreBlock = $("#lineScoreBlock");
+  const waveRecEl = $("#waveRec");
+  if (line && line.recording && typeof line.recording.score === "number"){
+    scoreBlock.style.display = "block";
+    $("#lineScoreNum").textContent = line.recording.score;
+  } else {
+    scoreBlock.style.display = "none";
+  }
+  if (line && line.recording && line.recording.waveform){
+    waveRecEl.style.display = "flex";
+    renderWaveBars("#waveRec", line.recording.waveform);
+  } else {
+    waveRecEl.style.display = "none";
+  }
+}
+
+/* =========================================================
+   DUB STAGE
+   Un solo <video> con il file sorgente: ogni battuta è solo un
+   intervallo [start,end] su cui facciamo seek, invece di un file
+   separato per riga (niente ffmpeg qui, tutto istantaneo).
+========================================================= */
+const clipVideo = $("#clipVideo");
+let mediaStream = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecording = false;
+let isCountingDown = false;
+let sourceVideoUrl = null;
+let stopWatchHandle = null;
+let graceStopHandle = null;
+let myAudioPlayer = null; // riproduzione della "mia registrazione" nel pulsante "Ascolta la tua voce"
+const RECORD_GRACE_SECONDS = 1.5; // tempo extra dopo la fine della clip prima che il microfono si blocchi, per lasciare finire di parlare
+const START_DELAY_AFTER_GO_MS = 700; // piccolo margine dopo il "VAI!" prima che la clip parta davvero
+
+// ferma qualsiasi audio/video in riproduzione o registrazione: usata ad ogni
+// cambio battuta, replay o ascolto della propria voce, così non si sovrappongono mai
+function stopAllAudio(){
+  if (isRecording) stopRecording();
+  stopWatcher();
+  if (graceStopHandle){ clearTimeout(graceStopHandle); graceStopHandle = null; }
+  clipVideo.pause();
+  if (myAudioPlayer){ myAudioPlayer.pause(); myAudioPlayer.currentTime = 0; }
+}
+
+// beep per il countdown, generato al volo (nessun file audio da caricare)
+let beepCtx = null;
+function playBeep(freq, duration){
+  try{
+    if (!beepCtx) beepCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (beepCtx.state === "suspended") beepCtx.resume();
+    const osc = beepCtx.createOscillator();
+    const gain = beepCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    const t0 = beepCtx.currentTime;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.3, t0 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    osc.connect(gain).connect(beepCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.02);
+  } catch(e){ /* browser senza Web Audio: niente suono, non blocca il countdown */ }
+}
+
+function readableTextColor(hex){
+  const c = hex.replace("#","");
+  const r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
+  const luma = (0.299*r + 0.587*g + 0.114*b) / 255;
+  return luma > 0.6 ? "#0c0a08" : "#f5efe2";
+}
+
+function ensureSourceVideoLoaded(){
+  if (!sourceFile) return false;
+  if (!sourceVideoUrl){
+    sourceVideoUrl = URL.createObjectURL(sourceFile);
+  }
+  if (clipVideo.src !== sourceVideoUrl){
+    clipVideo.src = sourceVideoUrl;
+  }
+  return true;
+}
+
+function loadDubLine(){
+  const line = lines[currentLineIndex];
+  const iAmTurnOwner = isMyTurnNow();
+  if (roomMode){
+    $("#lineIndexLabel").textContent = `SCENA ${roomTurnPointer+1} / ${roomTurnOrder.length}`;
+  } else {
+    $("#lineIndexLabel").textContent = `LINE ${currentLineIndex+1} / ${lines.length}`;
+  }
+  $("#lineTextOut").textContent = line.text || `Battuta ${currentLineIndex+1}`;
+
+  stopWatcher();
+  if (line.start !== undefined && line.start !== null && ensureSourceVideoLoaded()){
+    clipVideo.volume = 1;
+    const setTime = () => { clipVideo.currentTime = line.start; };
+    if (clipVideo.readyState >= 1) setTime();
+    else clipVideo.addEventListener("loadedmetadata", setTime, { once:true });
+  } else {
+    clipVideo.pause();
+  }
+
+  const badge = $("#charBadge");
+  const ch = getCharacter(line.characterId);
+  if (ch){
+    badge.style.display = "inline-block";
+    badge.style.background = ch.color;
+    badge.style.color = readableTextColor(ch.color);
+    badge.textContent = ch.name;
+  } else {
+    badge.style.display = "none";
+  }
+
+  updateRecBox();
+  renderOriginalWaveformForCurrentLine();
+  updateLineScoreUI();
+  applyTurnSpectatorUI(iAmTurnOwner);
+  if (roomMode){
+    $("#btnPrevLine").style.display = isHost ? "" : "none";
+    $("#btnPrevLine").disabled = roomTurnPointer <= 0;
+    $("#btnNextLine").style.display = iAmTurnOwner ? "" : "none";
+    $("#btnNextLine").textContent = roomTurnPointer === roomTurnOrder.length-1 ? "Fine battute →" : "Prossima scena →";
+  } else {
+    $("#btnPrevLine").style.display = "";
+    $("#btnNextLine").style.display = "";
+    $("#btnPrevLine").disabled = currentLineIndex === 0;
+    $("#btnNextLine").textContent = currentLineIndex === lines.length-1 ? "Finisci →" : "Successiva →";
+  }
+  setRecIndicator(false);
+}
+
+// mostra/nasconde i controlli di registrazione a seconda che sia o no il
+// proprio turno: chi non è di turno guarda e aspetta, non doppia nulla.
+function applyTurnSpectatorUI(iAmTurnOwner){
+  const banner = $("#turnWaitBanner");
+  if (!roomMode){
+    if (banner) banner.style.display = "none";
+    $("#btnRecord").style.display = "";
+    $("#btnPlayMine").style.display = "";
+    return;
+  }
+  $("#btnRecord").style.display = iAmTurnOwner ? "" : "none";
+  $("#btnPlayMine").style.display = iAmTurnOwner ? "" : "none";
+  if (banner){
+    if (iAmTurnOwner){
+      banner.style.display = "none";
+    } else {
+      const ownerId = claims[roomTurnOrder[roomTurnPointer]];
+      const ownerNick = (players[ownerId] && players[ownerId].nick) || "un altro giocatore";
+      banner.textContent = `🎧 In attesa — sta doppiando: ${ownerNick}. Guarda e ascolta, tra poco tocca a te (se hai battute prese).`;
+      banner.style.display = "block";
+    }
+  }
+}
+
+function setRecIndicator(live){
+  const el = $("#recIndicator");
+  el.classList.toggle("live", live);
+  // il timer (#recTimer) resta fuori dall'innerHTML sostituito, altrimenti
+  // ogni chiamata lo ricreava da zero e il conteggio si vedeva "scattare".
+  el.innerHTML = (live ? `<span class="rd"></span> REGISTRAZIONE` : `<span class="rd"></span> PRONTO`)
+    + `<span class="rec-timer" id="recTimer" style="display:none;">00:00</span>`;
+}
+
+/* ---------- timer di registrazione + barra "RECORDING" con secondi ---------- */
+let recTimerHandle = null;
+let recTimerStartedAt = 0;
+let recProgressTotalSec = 0;
+function formatRecTime(ms){
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+}
+function updateRecProgressUI(elapsedSec){
+  const total = recProgressTotalSec;
+  const pct = total > 0 ? Math.min(100, (elapsedSec/total)*100) : 0;
+  const fill = $("#recProgressFill");
+  if (fill) fill.style.width = pct + "%";
+  const elapsedEl = $("#recProgressElapsed");
+  if (elapsedEl) elapsedEl.textContent = `${elapsedSec.toFixed(1)}s / ${total.toFixed(1)}s`;
+  const leftEl = $("#recProgressLeft");
+  if (leftEl) leftEl.textContent = `${Math.max(0, total - elapsedSec).toFixed(1)}s LEFT`;
+}
+function startRecTimer(totalSec){
+  stopRecTimer();
+  recTimerStartedAt = Date.now();
+  recProgressTotalSec = totalSec || 0;
+  const el = $("#recTimer");
+  if (el){ el.style.display = "inline-block"; el.textContent = "00:00"; }
+  const box = $("#recProgressBox");
+  if (box) box.style.display = "block";
+  updateRecProgressUI(0);
+  recTimerHandle = setInterval(() => {
+    const elapsedMs = Date.now() - recTimerStartedAt;
+    const live = $("#recTimer");
+    if (live) live.textContent = formatRecTime(elapsedMs);
+    updateRecProgressUI(elapsedMs / 1000);
+  }, 100);
+}
+function stopRecTimer(){
+  if (recTimerHandle){ clearInterval(recTimerHandle); recTimerHandle = null; }
+  const el = $("#recTimer");
+  if (el) el.style.display = "none";
+  const box = $("#recProgressBox");
+  if (box) box.style.display = "none";
+}
+
+function updateRecBox(){
+  const line = lines[currentLineIndex];
+  const box = $("#recBox");
+  if (line.recording){
+    box.innerHTML = `<span style="color:var(--teal);">✓ Registrata</span> — pronta per l'ascolto o per essere sostituita.`;
+    $("#btnPlayMine").disabled = false;
+  } else {
+    box.textContent = "Nessuna registrazione ancora.";
+    $("#btnPlayMine").disabled = true;
+  }
+  // il pulsante per avanzare resta visibile ma disattivato finché questa
+  // battuta (se doppiabile) non ha una registrazione, così non si scopre
+  // il blocco solo cliccandoci sopra e ricevendo un toast.
+  $("#btnNextLine").disabled = currentLineNeedsRecording();
+}
+
+// ferma la riproduzione non appena si raggiunge la fine della battuta
+function watchUntilEnd(endTime, onDone){
+  stopWatcher();
+  stopWatchHandle = setInterval(() => {
+    if (clipVideo.currentTime >= endTime - 0.02 || clipVideo.paused){
+      stopWatcher();
+      if (onDone) onDone();
+    }
+  }, 60);
+}
+function stopWatcher(){
+  if (stopWatchHandle){ clearInterval(stopWatchHandle); stopWatchHandle = null; }
+}
+
+$("#btnReplay").addEventListener("click", () => {
+  stopAllAudio();
+  const line = lines[currentLineIndex];
+  if (line.start === undefined || line.start === null || !ensureSourceVideoLoaded()){
+    toast("Questa riga non ha un clip video (aggiunta manualmente).");
+    return;
+  }
+  clipVideo.volume = 1;
+  clipVideo.currentTime = line.start;
+  clipVideo.play();
+  watchUntilEnd(line.end, () => clipVideo.pause());
+});
+
+$("#btnPlayMine").addEventListener("click", () => {
+  stopAllAudio();
+  const line = lines[currentLineIndex];
+  if (!line.recording) return;
+  myAudioPlayer = new Audio(line.recording.url);
+  // Se la battuta ha anche una clip video di riferimento, la facciamo partire
+  // insieme alla tua registrazione (muta, per non sovrapporsi alla voce vera)
+  // così quando "ascolti la tua voce" vedi anche la scena, invece del solo
+  // audio isolato: prima il video restava fermo e si sentiva solo il parlato.
+  if (line.start !== undefined && line.start !== null && ensureSourceVideoLoaded()){
+    clipVideo.volume = 0;
+    const playBoth = () => {
+      clipVideo.currentTime = line.start;
+      const startPlayback = () => {
+        clipVideo.play();
+        myAudioPlayer.play();
+        watchUntilEnd(line.end, () => { clipVideo.pause(); });
+      };
+      // aspettiamo che il "seek" sia effettivo prima di far partire i due insieme,
+      // altrimenti il video può partire ancora dal frame precedente per un istante
+      if (clipVideo.readyState >= 2) startPlayback();
+      else clipVideo.addEventListener("seeked", startPlayback, { once:true });
+    };
+    if (clipVideo.readyState >= 1) playBoth();
+    else clipVideo.addEventListener("loadedmetadata", playBoth, { once:true });
+  } else {
+    myAudioPlayer.play();
+  }
+  // se l'audio della registrazione finisce prima/dopo il video (durate leggermente
+  // diverse), fermiamo comunque il video quando la voce finisce di parlare
+  myAudioPlayer.addEventListener("ended", () => { clipVideo.pause(); }, { once:true });
+});
+
+$("#btnRecord").addEventListener("click", async () => {
+  if (isRecording) { stopRecording(); return; }
+  if (isCountingDown) return;
+  stopAllAudio();
+  await startRecording();
+});
+
+// countdown di 3-2-1 prima che parta davvero la registrazione, così ci si può preparare
+// (con un beep ad ogni numero e un tono più alto sul "VAI!")
+function runCountdown(seconds){
+  return new Promise(resolve => {
+    const overlay = $("#countdown");
+    const numEl = $("#countdownNum");
+    overlay.classList.add("show");
+    let n = seconds;
+    function tick(){
+      numEl.textContent = n > 0 ? String(n) : "VAI!";
+      numEl.classList.remove("pop");
+      void numEl.offsetWidth;
+      numEl.classList.add("pop");
+      playBeep(n > 0 ? 660 : 990, n > 0 ? 0.12 : 0.22);
+      if (n <= 0){
+        // piccolo margine dopo il "VAI!" prima che la clip parta davvero
+        setTimeout(() => { overlay.classList.remove("show"); resolve(); }, START_DELAY_AFTER_GO_MS);
+        return;
+      }
+      n--;
+      setTimeout(tick, 1000);
+    }
+    tick();
+  });
+}
+
+async function startRecording(){
+  const line = lines[currentLineIndex];
+  try{
+    if (!mediaStream){
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+  } catch(err){
+    toast("Non riesco ad accedere al microfono: controlla i permessi del browser.");
+    return;
+  }
+
+  isCountingDown = true;
+  $("#btnRecord").disabled = true;
+  await runCountdown(3);
+  isCountingDown = false;
+  $("#btnRecord").disabled = false;
+
+  // nel frattempo l'utente potrebbe essere passato ad un'altra battuta: annulla in tal caso
+  if (lines[currentLineIndex] !== line) return;
+
+  recordedChunks = [];
+  const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
+  mediaRecorder = new MediaRecorder(mediaStream, { mimeType: mime });
+  mediaRecorder.ondataavailable = e => { if (e.data.size) recordedChunks.push(e.data); };
+  mediaRecorder.onstop = async () => {
+    const blob = new Blob(recordedChunks, { type: mime });
+    const url = URL.createObjectURL(blob);
+    const recObj = { blob, url, mime, score: null, waveform: null };
+    line.recording = recObj;
+    updateRecBox();
+    onLineRecorded(line);
+
+    // calcola forma d'onda + punteggio in background, senza bloccare la UI:
+    // la barra teal usa il volume (RMS), il punteggio invece confronta gli
+    // SPETTRI (bande di frequenza) di originale e registrazione.
+    // clipLen: la registrazione dura sempre un po' più della battuta vera
+    // (countdown + coda di grazia dopo la fine della clip): tagliamo l'analisi
+    // a questa durata per restare allineati bucket-per-bucket con l'originale.
+    const clipLen = (line.start !== undefined && line.start !== null) ? (line.end - line.start) : null;
+    try{
+      const [audioBuffer, recEnv] = await Promise.all([
+        getDecodedSourceAudio(),
+        computeRecordingEnvelope(blob, WAVE_BUCKETS, clipLen)
+      ]);
+      if (line.recording === recObj){ // non sovrascritta nel frattempo da una nuova registrazione
+        recObj.waveform = normalizeEnvelope(recEnv);
+        if (audioBuffer && line.start !== undefined && line.start !== null){
+          const origSpectrum = computeSpectralEnvelope(audioBuffer, line.start, line.end, SCORE_BUCKETS);
+          const recSpectrum = await computeRecordingSpectrum(blob, SCORE_BUCKETS, clipLen);
+          if (line.recording === recObj) recObj.score = computeLineScore(origSpectrum, recSpectrum);
+        }
+      }
+    } catch(e){
+      console.warn("Non riesco a calcolare spettro/punteggio della registrazione:", e);
+    }
+    if (lines[currentLineIndex] === line && line.recording === recObj){
+      updateRecBox();
+      updateLineScoreUI();
+    }
+  };
+  mediaRecorder.start();
+  isRecording = true;
+  setRecIndicator(true);
+  const clipLenForTimer = (line.start !== undefined && line.start !== null)
+    ? Math.max(0.2, line.end - line.start)
+    : 0;
+  startRecTimer(clipLenForTimer);
+  $("#btnRecord").classList.add("active");
+  $("#btnRecord").innerHTML = "■ Stop<small>Termina la registrazione</small>";
+
+  // riproduce l'originale a basso volume mentre registri, così senti il ritmo
+  if (line.start !== undefined && line.start !== null && ensureSourceVideoLoaded()){
+    clipVideo.volume = 0.06;
+    clipVideo.currentTime = line.start;
+    clipVideo.play();
+    // il video si ferma alla fine della battuta, ma il microfono resta acceso
+    // ancora qualche secondo in più: appena finisce la clip non si blocca subito,
+    // lascia il tempo di finire la frase
+    watchUntilEnd(line.end, () => clipVideo.pause());
+    const clipLen = clipLenForTimer;
+    if (graceStopHandle) clearTimeout(graceStopHandle);
+    graceStopHandle = setTimeout(() => {
+      if (isRecording) stopRecording();
+    }, (clipLen + RECORD_GRACE_SECONDS) * 1000);
+  }
+}
+
+function stopRecording(){
+  isRecording = false;
+  setRecIndicator(false);
+  stopRecTimer();
+  stopWatcher();
+  if (graceStopHandle){ clearTimeout(graceStopHandle); graceStopHandle = null; }
+  $("#btnRecord").classList.remove("active");
+  $("#btnRecord").innerHTML = "● Registra<small>Usa il microfono</small>";
+  if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+  clipVideo.pause();
+}
+
+$("#btnPrevLine").addEventListener("click", () => {
+  stopAllAudio();
+  if (roomMode){
+    // in stanza si torna indietro solo per riguardare/correggere: lo può fare
+    // solo l'host, e sposta il turno indietro per TUTTA la stanza (sincrono).
+    if (!isHost || roomTurnPointer <= 0) return;
+    roomTurnPointer--;
+    broadcastTurnSync();
+    enterRoomDubAtTurn();
+    return;
+  }
+  if (currentLineIndex > 0){ currentLineIndex--; loadDubLine(); }
+});
+// una battuta è "doppiabile" solo se ha un pezzo di video sorgente associato
+// (line.start/end): le righe aggiunte a mano senza clip non richiedono audio.
+function isLineDubbable(line){
+  return line.start !== undefined && line.start !== null;
+}
+// blocca l'avanzamento se la battuta corrente andava doppiata e non lo è
+// ancora stata: prima si poteva premere "Successiva"/"Finisci" senza aver
+// mai registrato nulla, arrivando al montaggio finale con solo l'audio
+// originale e nessuna reale possibilità di accorgersene prima della fine.
+function currentLineNeedsRecording(){
+  const line = lines[currentLineIndex];
+  return isLineDubbable(line) && !line.recording;
+}
+$("#btnNextLine").addEventListener("click", () => {
+  if (currentLineNeedsRecording()){
+    toast("Registra prima la tua voce su questa battuta per poter andare avanti.");
+    return;
+  }
+  if (roomMode){
+    if (!isMyTurnNow()) return; // pulsante nascosto per gli spettatori, ma per sicurezza
+    stopAllAudio();
+    advanceTurn(); // passa la scena a tutta la stanza: tocca al prossimo in roomTurnOrder
+    return;
+  }
+  stopAllAudio();
+  if (currentLineIndex < lines.length-1){
+    currentLineIndex++;
+    loadDubLine();
+  } else {
+    assembleFinalClip();
+  }
+});
+
+/* =========================================================
+   MULTIPLAYER: stanze peer-to-peer (nessun server centrale che
+   conserva video — solo un broker pubblico per far incontrare i
+   browser, poi tutto viaggia diretto tra i partecipanti).
+   L'host possiede il video sorgente e alla fine è lui a montare
+   il video finale con ffmpeg, poi lo rimanda a tutti.
+========================================================= */
+let peer = null;
+let connections = {};      // peerId -> DataConnection
+let isHost = false;
+let myPeerId = null;
+let myNick = "";
+let roomCode = null;
+let hostPeerId = null;
+let players = {};          // peerId -> { nick, isHost }
+let claims = {};           // lineIndex -> peerId
+let recordedLines = new Set();
+let roomMode = false;
+let roomTurnOrder = [];   // indici delle battute prese, in ordine: la sequenza dei turni condivisa da tutta la stanza
+let roomTurnPointer = -1; // quale posizione di roomTurnOrder è "in scena" adesso
+let pendingVideoMime = null;
+let pendingVideoName = null;
+
+// Config ICE con anche server TURN (non solo STUN): senza un TURN, due
+// browser dietro NAT "difficili" (reti mobili, molte reti aziendali/wifi
+// pubbliche) spesso non riescono proprio a stabilire la connessione diretta
+// e la stanza sembra "non funzionare" senza nessun errore chiaro. Le
+// credenziali sotto sono quelle pubbliche di test del progetto Open Relay
+// (metered.ca), pensate apposta per essere condivise in chiaro nel codice.
+const PEER_ICE_CONFIG_FALLBACK = {
+  iceServers: [
+    { urls: "stun:stun.relay.metered.ca:80" },
+    { urls: "turn:global.relay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+    { urls: "turn:global.relay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+    { urls: "turn:global.relay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" },
+  ]
+};
+
+// Le credenziali TURN qui sopra sono quelle pubbliche condivise del progetto
+// Open Relay: sono sovraccariche (usate da migliaia di app) e spesso non
+// rispondono, il che è la causa più comune del "mi collego alla stanza..."
+// che non finisce mai quando i due giocatori sono su reti diverse (serve
+// davvero il relay TURN, e quello condiviso lascia a metà la connessione).
+// Per questo prima di creare/entrare in una stanza chiediamo alla nostra
+// function Netlify una configurazione ICE dinamica (credenziali TURN
+// personali, se configurate) e usiamo il set qui sopra solo come fallback
+// se quella function non risponde o non è configurata.
+async function getIceConfig(){
+  try {
+    const res = await fetch("/api/turn-credentials");
+    if (res.ok){
+      const data = await res.json();
+      if (data && Array.isArray(data.iceServers) && data.iceServers.length){
+        return { iceServers: data.iceServers };
+      }
+    }
+  } catch(e){
+    console.warn("Credenziali TURN dinamiche non disponibili, uso il fallback statico.", e);
+  }
+  return PEER_ICE_CONFIG_FALLBACK;
+}
+
+// Se il peer si stacca dal server di segnalazione (rete instabile, tab in
+// background troppo a lungo, ecc.) va ritentata la connessione: senza
+// questo, prima la stanza restava "morta" in silenzio finché non si usciva
+// e rientrava a mano.
+function attachPeerResilience(p, label){
+  p.on("disconnected", () => {
+    console.warn(label + ": disconnesso dal server di segnalazione, riprovo…");
+    setMpStatus("Connessione instabile, riprovo…", true);
+    setTimeout(() => { if (p && !p.destroyed) p.reconnect(); }, 1000);
+  });
+}
+
+function randomRoomCode(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for (let i = 0; i < 5; i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+function setMpStatus(msg, isErr=false){
+  const el = $("#mpStatus");
+  el.textContent = msg;
+  el.classList.toggle("err", isErr);
+}
+
+// Blocca i doppi click su "Crea stanza" / "Entra": senza questo, cliccare più
+// volte prima che la connessione si concludesse creava più oggetti Peer in
+// parallelo (uno per click), e ognuno arrivava a connettersi/disconnettersi
+// per conto suo — lato host questo si vedeva come lo stesso giocatore che
+// "entra ed esce" più volte di fila. Ora, mentre una connessione è in corso,
+// i pulsanti restano disabilitati finché non arriva un esito (successo o errore).
+let mpConnecting = false;
+function setMpConnecting(state){
+  mpConnecting = state;
+  $("#btnCreateRoom").disabled = state || !sourceFile;
+  $("#btnJoinRoom").disabled = state;
+}
+
+$("#btnCreateRoom").addEventListener("click", async () => {
+  if (mpConnecting) return;
+  if (!sourceFile){ setMpStatus("Carica o importa prima un pack.", true); return; }
+  setMpConnecting(true);
+  // se c'era già un peer vivo da una sessione precedente (es. una stanza
+  // abbandonata senza passare da "Esci dalla stanza"), va chiuso esplicitamente:
+  // altrimenti resta connesso al broker in background e le sue connessioni
+  // residue potevano interferire con la nuova stanza.
+  if (peer){ try{ peer.destroy(); } catch(e){} peer = null; }
+  connections = {}; players = {}; claims = {}; recordedLines = new Set(); roomTurnOrder = []; roomTurnPointer = -1;
+  myNick = $("#hostNickInput").value.trim() || "Host";
+  const code = randomRoomCode();
+  setMpStatus("Creo la stanza…");
+  const iceConfig = await getIceConfig();
+  peer = new Peer("cv-" + code, { config: iceConfig });
+  attachPeerResilience(peer, "host");
+  peer.on("open", (id) => {
+    setMpConnecting(false);
+    isHost = true; myPeerId = id; hostPeerId = id; roomCode = code;
+    players = { [id]: { nick: myNick, isHost:true } };
+    claims = {}; recordedLines = new Set();
+    renderRoom();
+    showScreen("room");
+  });
+  peer.on("connection", (conn) => {
+    connections[conn.peer] = conn;
+    conn.on("data", (msg) => hostHandleMessage(conn, msg));
+    conn.on("close", () => {
+      delete connections[conn.peer];
+      delete players[conn.peer];
+      const wasCurrentTurnOwner = roomTurnOrder.length && roomTurnPointer >= 0 && roomTurnPointer < roomTurnOrder.length
+        && claims[roomTurnOrder[roomTurnPointer]] === conn.peer;
+      Object.keys(claims).forEach(k => { if (claims[k] === conn.peer) delete claims[k]; });
+      broadcastRoomState();
+      // se chi si è scollegato era proprio quello di turno, non far restare
+      // la stanza bloccata ad aspettarlo per sempre: passa la scena.
+      if (wasCurrentTurnOwner) doHostAdvanceTurn();
+    });
+    conn.on("error", (err) => console.error("connessione guest in errore:", err));
+  });
+  peer.on("error", (err) => {
+    console.error(err);
+    setMpConnecting(false);
+    if (err.type === "unavailable-id"){
+      setMpStatus("Codice stanza già in uso in questo momento, riprova (verrà generato un codice diverso).", true);
+    } else {
+      setMpStatus("Errore nella creazione della stanza (" + err.type + "). Riprova.", true);
+    }
+  });
+});
+
+$("#btnJoinRoom").addEventListener("click", async () => {
+  if (mpConnecting) return;
+  const code = $("#joinCodeInput").value.trim().toUpperCase();
+  if (!code){ setMpStatus("Inserisci il codice della stanza.", true); return; }
+  setMpConnecting(true);
+  if (peer){ try{ peer.destroy(); } catch(e){} peer = null; }
+  connections = {}; players = {}; claims = {}; recordedLines = new Set(); roomTurnOrder = []; roomTurnPointer = -1;
+  myNick = $("#guestNickInput").value.trim() || "Giocatore";
+  setMpStatus("Mi collego alla stanza…");
+  const iceConfig = await getIceConfig();
+  peer = new Peer({ config: iceConfig });
+  attachPeerResilience(peer, "guest");
+  // se dopo un po' la connessione non si è ancora aperta (host offline,
+  // codice sbagliato, o NAT che blocca tutto), avvisa invece di restare
+  // in "Mi collego alla stanza…" all'infinito senza nessun feedback.
+  const joinTimeout = setTimeout(() => {
+    setMpConnecting(false);
+    setMpStatus("Non riesco a raggiungere la stanza: controlla il codice o che l'host sia ancora online.", true);
+  }, 15000);
+  peer.on("open", (id) => {
+    myPeerId = id;
+    const conn = peer.connect("cv-" + code, { reliable: true });
+    conn.on("open", () => {
+      clearTimeout(joinTimeout);
+      setMpConnecting(false);
+      isHost = false; roomCode = code; hostPeerId = conn.peer;
+      connections[conn.peer] = conn;
+      conn.send({ type:"hello", nick: myNick });
+      renderRoom();
+      showScreen("room");
+    });
+    conn.on("data", (msg) => guestHandleMessage(msg));
+    conn.on("close", () => toast("Connessione con l'host persa."));
+    conn.on("error", (err) => {
+      console.error(err);
+      clearTimeout(joinTimeout);
+      setMpConnecting(false);
+      setMpStatus("Non riesco a entrare nella stanza: controlla il codice.", true);
+    });
+  });
+  peer.on("error", (err) => {
+    console.error(err);
+    clearTimeout(joinTimeout);
+    setMpConnecting(false);
+    if (err.type === "peer-unavailable"){
+      setMpStatus("Nessuna stanza trovata con questo codice: controlla di averlo scritto giusto e che l'host non l'abbia chiusa.", true);
+    } else {
+      setMpStatus("Errore di connessione (" + err.type + "). Controlla il codice e riprova.", true);
+    }
+  });
+});
+
+$("#btnLeaveRoom").addEventListener("click", () => {
+  leaveRoom();
+  showScreen("multiplayer");
+});
+function leaveRoom(){
+  if (peer){ try{ peer.destroy(); } catch(e){} peer = null; }
+  connections = {}; players = {}; claims = {}; recordedLines = new Set(); roomTurnOrder = []; roomTurnPointer = -1;
+  isHost = false; roomCode = null; hostPeerId = null; roomMode = false;
+}
+
+// Doppiaggio a TURNI: non più "ognuno registra per conto suo quando vuole".
+// Solo l'host avvia la sequenza; a quel punto tutta la stanza viene portata
+// sulla prima battuta presa. Chi l'ha presa registra mentre gli altri
+// guardano e aspettano; quando chi è di turno preme "Successiva", si passa
+// alla battuta dopo e — se è di un altro giocatore — tocca a lui.
+$("#btnGoDubRoom").addEventListener("click", () => {
+  if (!isHost){ toast("Solo l'host avvia il doppiaggio a turni: aspetta che parta, verrai portato automaticamente sulla scena giusta."); return; }
+  hostStartTurns();
+});
+$("#btnAssembleRoom").addEventListener("click", () => assembleFinalClip());
+
+function hostStartTurns(){
+  const order = Object.keys(claims).map(Number).sort((a,b)=>a-b);
+  if (!order.length){ toast("Nessuno ha ancora preso una battuta: fatene prendere almeno una prima di iniziare."); return; }
+  if (!sourceFile){ toast("Manca ancora il video del pack."); return; }
+  roomTurnOrder = order;
+  roomTurnPointer = 0;
+  broadcastTurnSync();
+  enterRoomDubAtTurn();
+  ensureFFmpeg(true).catch(() => {}); // solo l'host monta il video finale, ma può iniziare a scaldare il motore
+}
+
+// porta questo browser (host o guest) sulla battuta "in scena" adesso,
+// secondo roomTurnOrder/roomTurnPointer correnti.
+function enterRoomDubAtTurn(){
+  if (!roomTurnOrder.length || roomTurnPointer < 0 || roomTurnPointer >= roomTurnOrder.length) return;
+  if (!sourceFile){ toast("Il pack non è ancora arrivato dall'host: aspetta qualche secondo e riprova."); return; }
+  stopAllAudio();
+  roomMode = true;
+  currentLineIndex = roomTurnOrder[roomTurnPointer];
+  $("#packNameStage").textContent = (packMeta.name || "Pack condiviso") + " · stanza " + (roomCode || "");
+  buildWave("#waveOriginal", 28);
+  loadDubLine();
+  showScreen("dub");
+}
+
+// manda a tutti (host->guest) lo stato del turno corrente
+function broadcastTurnSync(){
+  const msg = { type:"turn-sync", turnOrder: roomTurnOrder, turnPointer: roomTurnPointer };
+  Object.values(connections).forEach(conn => { if (conn.open) conn.send(msg); });
+}
+
+// avanza il turno di una posizione: solo l'host lo fa davvero, i guest
+// mandano una richiesta e l'host la valida (deve essere il loro turno).
+function advanceTurn(){
+  if (isHost){ doHostAdvanceTurn(); return; }
+  const conn = connections[hostPeerId];
+  if (conn && conn.open) conn.send({ type:"advance-turn" });
+}
+function doHostAdvanceTurn(){
+  roomTurnPointer++;
+  broadcastTurnSync();
+  if (roomTurnPointer < roomTurnOrder.length){
+    enterRoomDubAtTurn();
+  } else {
+    roomMode = false;
+    toast("Tutte le battute prese sono state doppiate! Quando vuoi, genera il video finale dalla lobby.");
+    renderRoom();
+    showScreen("room");
+  }
+}
+function isMyTurnNow(){
+  if (!roomMode || roomTurnPointer < 0 || roomTurnPointer >= roomTurnOrder.length) return false;
+  return claims[roomTurnOrder[roomTurnPointer]] === myPeerId;
+}
+
+// Il claim ora si fa per PERSONAGGIO, non più battuta per battuta: si
+// sceglie chi si vuole doppiare e si prendono in un colpo solo tutte le
+// battute di quel personaggio. Le battute SENZA personaggio assegnato
+// restano un'eccezione (non c'è un personaggio da scegliere) e si prendono
+// ancora singolarmente, con la chiave speciale "line:<idx>".
+//
+// "claims" resta internamente indicizzato per battuta (lineIndex -> peerId):
+// questo evita di dover riscrivere tutto il motore dei turni, che lavora già
+// battuta per battuta e funziona bene così (l'ordine dei turni segue
+// comunque l'ordine delle battute nel video, anche quando più battute di
+// fila sono dello stesso personaggio/stesso giocatore).
+function groupLineIndices(groupKey){
+  if (groupKey.startsWith("line:")){
+    const idx = +groupKey.slice(5);
+    const line = lines[idx];
+    return (line && line.start !== undefined && line.start !== null) ? [idx] : [];
+  }
+  return lines
+    .map((l, i) => i)
+    .filter(i => lines[i].characterId === groupKey && lines[i].start !== undefined && lines[i].start !== null);
+}
+// applica il toggle per un peer specifico: se il peer ha già TUTTE le
+// battute del gruppo, gliele lascia; altrimenti gli assegna solo quelle
+// ancora libere del gruppo (non ruba mai battute già prese da altri).
+function hostToggleClaimGroup(peerId, groupKey){
+  const idxs = groupLineIndices(groupKey);
+  if (!idxs.length) return;
+  const allMine = idxs.every(i => claims[i] === peerId);
+  if (allMine){
+    idxs.forEach(i => { if (claims[i] === peerId) delete claims[i]; });
+  } else {
+    idxs.forEach(i => { if (!claims[i]) claims[i] = peerId; });
+  }
+}
+function toggleClaim(groupKey){
+  if (isHost){
+    hostToggleClaimGroup(myPeerId, groupKey);
+    broadcastRoomState();
+  } else {
+    const conn = connections[hostPeerId];
+    if (conn && conn.open) conn.send({ type:"claim-toggle-group", groupKey });
+  }
+}
+
+async function sendPackTo(conn){
+  if (!sourceFile) return;
+  conn.send({
+    type:"pack-meta",
+    packMeta, characters,
+    lines: lines.map(l => ({ id:l.id, start:l.start, end:l.end, text:l.text, characterId:l.characterId, manual:!!l.manual })),
+    videoMime: sourceFile.type || "video/mp4",
+    videoName: sourceFile.name || "video.mp4"
+  });
+  const buf = await sourceFile.arrayBuffer();
+  conn.send({ type:"pack-video", data: buf });
+}
+
+function broadcastRoomState(){
+  const msg = { type:"room-state", players, claims, recordedLines:[...recordedLines] };
+  Object.values(connections).forEach(conn => { if (conn.open) conn.send(msg); });
+  renderRoom();
+}
+
+function hostHandleMessage(conn, msg){
+  if (!msg || !msg.type) return;
+  if (msg.type === "hello"){
+    players[conn.peer] = { nick: msg.nick || "Giocatore", isHost:false };
+    sendPackTo(conn);
+    broadcastRoomState();
+  } else if (msg.type === "claim-toggle-group"){
+    hostToggleClaimGroup(conn.peer, msg.groupKey || "");
+    broadcastRoomState();
+  } else if (msg.type === "advance-turn"){
+    // un guest chiede di passare alla scena successiva: valido SOLO se è
+    // davvero il suo turno adesso, altrimenti viene ignorato (evita che si
+    // "rubi" il turno di qualcun altro per errore o in malafede).
+    if (!roomTurnOrder.length || roomTurnPointer < 0 || roomTurnPointer >= roomTurnOrder.length) return;
+    if (claims[roomTurnOrder[roomTurnPointer]] !== conn.peer) return;
+    doHostAdvanceTurn();
+  } else if (msg.type === "recording"){
+    const idx = msg.lineIndex;
+    const line = lines[idx];
+    if (!line) return;
+    const blob = new Blob([msg.data], { type: msg.mime || "audio/webm" });
+    const recObj = { blob, url: URL.createObjectURL(blob), mime: msg.mime, score: null, waveform: null };
+    line.recording = recObj;
+    recordedLines.add(idx);
+    broadcastRoomState();
+    // stesso calcolo di punteggio/spettro delle registrazioni fatte in locale,
+    // così anche le battute doppiate dagli altri giocatori entrano nella media finale.
+    const clipLen = (line.start !== undefined && line.start !== null) ? (line.end - line.start) : null;
+    (async () => {
+      try{
+        const [audioBuffer, recEnv] = await Promise.all([
+          getDecodedSourceAudio(),
+          computeRecordingEnvelope(blob, WAVE_BUCKETS, clipLen)
+        ]);
+        if (line.recording === recObj){
+          recObj.waveform = normalizeEnvelope(recEnv);
+          if (audioBuffer && line.start !== undefined && line.start !== null){
+            const origSpectrum = computeSpectralEnvelope(audioBuffer, line.start, line.end, SCORE_BUCKETS);
+            const recSpectrum = await computeRecordingSpectrum(blob, SCORE_BUCKETS, clipLen);
+            if (line.recording === recObj) recObj.score = computeLineScore(origSpectrum, recSpectrum);
+          }
+        }
+      } catch(e){
+        console.warn("Non riesco a calcolare il punteggio per una registrazione ricevuta:", e);
+      }
+    })();
+  }
+}
+
+function guestHandleMessage(msg){
+  if (!msg || !msg.type) return;
+  if (msg.type === "pack-meta"){
+    packMeta = msg.packMeta || {};
+    characters = msg.characters || [];
+    lines = (msg.lines || []).map(l => ({ ...l, recording:null }));
+    pendingVideoMime = msg.videoMime;
+    pendingVideoName = msg.videoName;
+    buildCharChips();
+    renderRoom();
+  } else if (msg.type === "pack-video"){
+    const blob = new Blob([msg.data], { type: pendingVideoMime || "video/mp4" });
+    sourceFile = new File([blob], pendingVideoName || "video.mp4", { type: pendingVideoMime || "video/mp4" });
+    sourceVideoUrl = null;
+    toast("Pack ricevuto: " + (packMeta.name || "senza nome") + " (" + lines.length + " battute).");
+    renderRoom();
+  } else if (msg.type === "room-state"){
+    players = msg.players || {};
+    claims = msg.claims || {};
+    recordedLines = new Set(msg.recordedLines || []);
+    renderRoom();
+  } else if (msg.type === "turn-sync"){
+    // l'host ha avviato/avanzato il doppiaggio a turni: tutta la stanza
+    // viene portata sulla stessa scena nello stesso momento, non ognuno
+    // per conto suo — chi non è di turno la guarda soltanto.
+    roomTurnOrder = msg.turnOrder || [];
+    roomTurnPointer = (msg.turnPointer === undefined) ? -1 : msg.turnPointer;
+    if (roomTurnPointer >= 0 && roomTurnPointer < roomTurnOrder.length){
+      enterRoomDubAtTurn();
+    } else {
+      roomMode = false;
+      const onDubScreen = document.getElementById("screen-dub").classList.contains("active");
+      toast("Il doppiaggio a turni di questa stanza è finito.");
+      renderRoom();
+      if (onDubScreen) showScreen("room");
+    }
+  } else if (msg.type === "final-video"){
+    const blob = new Blob([msg.data], { type: msg.mime || "video/mp4" });
+    if (!blob.size){
+      toast("Il video finale ricevuto dall'host è vuoto: chiedigli di rimandarlo.");
+      console.warn("final-video ricevuto ma vuoto", msg);
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    $("#finalVideo").src = url;
+    $("#btnDownload").href = url;
+    showScreen("finish");
+    $("#btnBackToRoom").style.display = roomCode ? "inline-block" : "none";
+    updateFinishScoreUI();
+    addCreatorStudioClip(blob);
+    toast("Il video finale è arrivato dall'host ed è stato salvato anche nel tuo Creator Studio.");
+  }
+}
+
+// hook chiamato ogni volta che si finisce di registrare una battuta nel Dub Stage:
+// se si è in una stanza, sincronizza la registrazione con l'host.
+function onLineRecorded(line){
+  if (!roomCode) return;
+  const idx = lines.indexOf(line);
+  if (idx < 0) return;
+  if (isHost){
+    recordedLines.add(idx);
+    broadcastRoomState();
+  } else {
+    const conn = connections[hostPeerId];
+    if (conn && conn.open){
+      line.recording.blob.arrayBuffer().then(buf => {
+        conn.send({ type:"recording", lineIndex: idx, mime: line.recording.mime, data: buf });
+      });
+    }
+  }
+}
+
+// hook chiamato quando l'host finisce di montare il video finale:
+// lo rimanda a tutti i partecipanti della stanza.
+async function onFinalVideoReady(blob){
+  if (!roomCode || !isHost) return;
+  loading("Invio il video finale ai giocatori…", "Per clip lunghe può richiedere qualche istante.");
+  const buf = await blob.arrayBuffer();
+  const targets = Object.values(connections).filter(conn => conn.open);
+  if (!targets.length){
+    stopLoading();
+    console.warn("Nessuna connessione aperta: nessun giocatore riceverà il video finale.");
+    return;
+  }
+  let failed = 0;
+  targets.forEach(conn => {
+    try {
+      conn.send({ type:"final-video", mime:"video/mp4", data: buf });
+    } catch(err){
+      failed++;
+      console.error("Invio video finale fallito verso", conn.peer, err);
+    }
+  });
+  stopLoading();
+  if (failed) toast(`Il video finale non è arrivato a ${failed} giocatore/i: chiedigli di aspettare/riconnettersi.`);
+}
+
+function renderRoom(){
+  $("#roomCodeOut").textContent = roomCode || "—";
+  const dubbable = lines.filter(l => l.start !== undefined && l.start !== null).length;
+  $("#roomLineCount").textContent = `· ${dubbable} battute nel pack`;
+  $("#roomYouAre").innerHTML = isHost
+    ? `<span class="host-tag">TU SEI L'HOST</span>`
+    : `<span style="color:var(--dim);">${escapeHtml(myNick)}</span>`;
+
+  const pl = $("#playerList");
+  pl.innerHTML = "";
+  Object.entries(players).forEach(([pid, p]) => {
+    const mine = pid === myPeerId;
+    const claimedCount = Object.values(claims).filter(v => v === pid).length;
+    // personaggi che questo giocatore doppierà, dedotti dalle battute che ha
+    // preso: mostrati sotto al nome così si vede subito "chi fa chi".
+    const charNames = [...new Set(
+      Object.entries(claims)
+        .filter(([, owner]) => owner === pid)
+        .map(([idx]) => getCharacter(lines[idx] && lines[idx].characterId))
+        .filter(Boolean)
+        .map(ch => ch.name)
+    )];
+    const row = document.createElement("div");
+    row.className = "player-row";
+    row.innerHTML = `<span>
+        <span class="${mine?"you":""}">${escapeHtml(p.nick || "Giocatore")}${mine?" (tu)":""}</span>
+        ${charNames.length ? `<div style="font-family:var(--mono);font-size:10px;color:var(--amber);margin-top:2px;">${charNames.map(escapeHtml).join(" · ")}</div>` : ""}
+      </span>
+      <span>${p.isHost ? '<span class="host-tag">HOST</span> · ' : ""}${claimedCount} battute</span>`;
+    pl.appendChild(row);
+  });
+
+  const cl = $("#claimList");
+  cl.innerHTML = "";
+  const dubbableIdx = lines
+    .map((l, i) => i)
+    .filter(i => lines[i].start !== undefined && lines[i].start !== null);
+
+  function ownerSummary(idxs){
+    const owners = new Set(idxs.map(i => claims[i]).filter(Boolean));
+    const freeCount = idxs.filter(i => !claims[i]).length;
+    const mineCount = idxs.filter(i => claims[i] === myPeerId).length;
+    const doneCount = idxs.filter(i => recordedLines.has(i)).length;
+    return { owners, freeCount, mineCount, doneCount, total: idxs.length };
+  }
+
+  function renderClaimRow(groupKey, label, idxs, color){
+    const { owners, freeCount, mineCount, doneCount, total } = ownerSummary(idxs);
+    let ownerText, btnText, btnDisabled = false, btnClass = "";
+    if (owners.size === 0){
+      ownerText = "libera"; btnText = "Prendi";
+    } else if (mineCount === total){
+      ownerText = "tua"; btnText = "Lascia"; btnClass = "claimed";
+    } else if (owners.size === 1 && freeCount === 0){
+      const soleOwner = [...owners][0];
+      ownerText = escapeHtml((players[soleOwner] && players[soleOwner].nick) || "???");
+      btnText = "Occupato"; btnClass = "claimed"; btnDisabled = true;
+    } else if (mineCount > 0){
+      ownerText = `parziale (${mineCount}/${total} tue)`; btnText = "Lascia le tue"; btnClass = "claimed";
+    } else if (freeCount > 0){
+      ownerText = `parziale (${total - freeCount}/${total} occupate)`; btnText = "Prendi le libere";
+    } else {
+      ownerText = "occupata da altri"; btnText = "Occupato"; btnClass = "claimed"; btnDisabled = true;
+    }
+    const row = document.createElement("div");
+    row.className = "claim-row";
+    row.innerHTML = `
+      <span class="txt">${color ? `<span style="color:${color};">●</span> ` : ""}${escapeHtml(label)} <span style="color:var(--dim);">· ${total} battut${total===1?"a":"e"}${doneCount ? `, ${doneCount} fatta/e ✓` : ""}</span></span>
+      <span class="owner ${mineCount>0?"mine":""}">${ownerText}</span>
+      <button class="${btnClass}" data-claimgroup="${groupKey}" ${btnDisabled?"disabled":""}>${btnText}</button>
+    `;
+    cl.appendChild(row);
+  }
+
+  // un gruppo per ogni personaggio che ha almeno una battuta doppiabile
+  characters.forEach(ch => {
+    const idxs = dubbableIdx.filter(i => lines[i].characterId === ch.id);
+    if (!idxs.length) return;
+    renderClaimRow(ch.id, ch.name || "Personaggio", idxs, ch.color);
+  });
+  // battute senza personaggio assegnato: niente da raggruppare, si prendono singolarmente
+  dubbableIdx.filter(i => !lines[i].characterId).forEach(i => {
+    renderClaimRow("line:" + i, `${String(i+1).padStart(2,"0")}. ${lines[i].text || "(senza testo)"}`, [i], null);
+  });
+
+  cl.querySelectorAll("[data-claimgroup]").forEach(btn => {
+    btn.addEventListener("click", () => toggleClaim(btn.dataset.claimgroup));
+  });
+
+  $("#btnAssembleRoom").style.display = isHost ? "inline-block" : "none";
+
+  // Solo l'host avvia/riavvia il doppiaggio a turni: i guest vedono invece
+  // una nota che li avvisa di aspettare (verranno portati in automatico
+  // sulla scena giusta quando l'host parte).
+  const goBtn = $("#btnGoDubRoom");
+  const waitNote = $("#guestWaitTurnNote");
+  const turnsRunning = roomMode && roomTurnOrder.length > 0;
+  if (isHost){
+    goBtn.style.display = "inline-block";
+    goBtn.textContent = turnsRunning ? "Riprendi il doppiaggio a turni →" : "Avvia doppiaggio a turni →";
+    if (waitNote) waitNote.style.display = "none";
+  } else {
+    goBtn.style.display = "none";
+    if (waitNote) waitNote.style.display = "block";
+  }
+}
+
+/* =========================================================
+   ASSEMBLAGGIO FINALE: mux audio registrato + concat
+========================================================= */
+// esegue un comando ffmpeg e SOLLEVA un errore se il codice di uscita non è 0:
+// ffmpeg.wasm non lancia eccezioni da solo sui comandi falliti, quindi senza
+// questo controllo un errore passava inosservato e si arrivava comunque alla
+// fine con un file rotto o vuoto spacciato per il video finale.
+async function execChecked(ff, args, errLabel){
+  const ret = await ff.exec(args);
+  if (ret !== 0 && ret !== undefined){
+    throw new Error(`${errLabel || "comando ffmpeg"} fallito (codice ${ret})`);
+  }
+}
+async function assertNonEmpty(ff, filename){
+  const data = await ff.readFile(filename);
+  if (!data || !data.byteLength){
+    throw new Error(`${filename} è vuoto: il montaggio di questo pezzo non è riuscito.`);
+  }
+  return data;
+}
+
+async function assembleFinalClip(){
+  showScreen("finish");
+  $("#btnBackToRoom").style.display = roomCode ? "inline-block" : "none";
+  $("#finishLog").textContent = "";
+  $("#finalVideo").removeAttribute("src");
+  $("#finalVideo").load();
+  $("#finishScoreBlock").style.display = "none";
+
+  if (!sourceFile){
+    stopLoading();
+    toast("Manca il video sorgente, ricarica il file.");
+    return;
+  }
+
+  loading("Monto il video finale…", ffmpegReady ? "Il motore era già pronto, parto subito." : "Un momento, sto ancora preparando il motore video.");
+
+  try {
+    const ff = await ensureFFmpeg();
+    loading("Preparo il video sorgente…", "Un solo caricamento per tutte le battute.");
+    await ff.writeFile("source_input.mp4", await fetchFile(sourceFile));
+
+    // Durata totale del video sorgente: serve per capire quanto video c'è
+    // DOPO l'ultima battuta, e per i tratti PRIMA/TRA le battute qui sotto.
+    const totalDuration = await getVideoDuration(sourceFile);
+
+    const dubbedNames = [];
+    let gapCounter = 0;
+
+    // ritaglia e aggiunge un pezzo di video "non battuta" (pausa, transizione,
+    // qualunque tratto non riconosciuto come battuta) tenendo SEMPRE l'audio
+    // originale: prima non veniva incluso per niente nel video finale.
+    async function addOriginalGap(gapStart, gapEnd){
+      if (gapEnd - gapStart < 0.05) return; // tratto troppo corto, si salta (evita segmenti quasi-zero)
+      const gapName = `gap_${gapCounter++}.mp4`;
+      await execChecked(ff, [
+        "-i", "source_input.mp4",
+        "-ss", String(gapStart),
+        "-to", String(gapEnd),
+        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+        "-c:a", "aac", "-ar", "44100",
+        "-y", gapName
+      ], "Ritaglio tratto non battuta");
+      await assertNonEmpty(ff, gapName);
+      dubbedNames.push(gapName);
+    }
+
+    // righe aggiunte a mano (senza tempi nel video) restano fuori dalla
+    // ricostruzione della timeline: si limita a segnalarle come prima.
+    lines.forEach((line, i) => {
+      if (line.start === undefined || line.start === null){
+        logFinish(`Riga ${i+1}: nessun video sorgente, saltata.`);
+      }
+    });
+
+    // ordina le battute per tempo di inizio, così i tratti "tra una battuta
+    // e l'altra" si calcolano correttamente anche se in "lines" non sono
+    // già in ordine cronologico.
+    const timedOrder = lines
+      .map((line, i) => ({ line, i }))
+      .filter(({ line }) => line.start !== undefined && line.start !== null)
+      .sort((a, b) => a.line.start - b.line.start);
+
+    let cursor = 0;
+
+    for (let k = 0; k < timedOrder.length; k++){
+      const { line, i } = timedOrder[k];
+      loading("Monto la mega clip…", `Battuta ${k+1} / ${timedOrder.length}`);
+      const outName = `dub_${i}.mp4`;
+
+      // tratto non doppiato PRIMA di questa battuta: audio originale, incluso per intero
+      await addOriginalGap(cursor, line.start);
+
+      // ritaglia la battuta dal video originale
+      const segName = `seg_${i}.mp4`;
+      await execChecked(ff, [
+        "-i", "source_input.mp4",
+        "-ss", String(line.start),
+        "-to", String(line.end),
+        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+        "-c:a", "aac", "-ar", "44100",
+        "-y", segName
+      ], `Ritaglio battuta ${i+1}`);
+      await assertNonEmpty(ff, segName);
+
+      if (line.recording){
+        const recName = `rec_${i}.webm`;
+        await ff.writeFile(recName, await fetchFile(line.recording.blob));
+        try {
+          await execChecked(ff, [
+            "-i", segName,
+            "-i", recName,
+            "-map", "0:v:0", "-map", "1:a:0",
+            "-c:v", "copy", "-c:a", "aac", "-ar", "44100",
+            "-shortest", "-y", outName
+          ], `Mixaggio battuta ${i+1}`);
+          await assertNonEmpty(ff, outName);
+          logFinish(`Riga ${i+1}: audio sostituito con la tua registrazione.`);
+        } catch(err){
+          logFinish(`Riga ${i+1}: errore nel mixaggio, uso l'audio originale. (${err.message})`);
+          await execChecked(ff, ["-i", segName, "-c", "copy", "-y", outName], `Copia battuta ${i+1}`);
+          await assertNonEmpty(ff, outName);
+        }
+      } else {
+        await execChecked(ff, ["-i", segName, "-c", "copy", "-y", outName], `Copia battuta ${i+1}`);
+        await assertNonEmpty(ff, outName);
+        logFinish(`Riga ${i+1}: nessuna registrazione, tengo l'audio originale.`);
+      }
+      dubbedNames.push(outName);
+      cursor = line.end;
+    }
+
+    // tratto non doppiato DOPO l'ultima battuta (o tutto il video, se non
+    // c'era nemmeno una battuta con tempi validi): audio originale.
+    loading("Monto la mega clip…", "Aggiungo l'ultimo tratto…");
+    await addOriginalGap(cursor, totalDuration);
+
+    if (!dubbedNames.length){
+      stopLoading();
+      toast("Non c'è nessuna battuta da unire.");
+      return;
+    }
+
+    loading("Unisco tutte le battute…", "Ultimo passaggio.");
+    // Usiamo il FILTRO concat (non il demuxer "-f concat"): il demuxer si
+    // limita a incollare i bitstream già codificati così come sono, e con
+    // più clip audio AAC codificate separatamente (una per battuta/tratto)
+    // questo produceva i click/silenzi sentiti ai punti di giunzione. Il
+    // filtro concat invece decodifica ogni pezzo e li ricompone campione
+    // per campione in un unico encode continuo: niente più glitch ai tagli.
+    const concatInputArgs = [];
+    dubbedNames.forEach(n => { concatInputArgs.push("-i", n); });
+    let concatFilterInputs = "";
+    dubbedNames.forEach((_, idx) => { concatFilterInputs += `[${idx}:v:0][${idx}:a:0]`; });
+    const concatFilter = `${concatFilterInputs}concat=n=${dubbedNames.length}:v=1:a=1[outv][outa]`;
+    try {
+      await execChecked(ff, [
+        ...concatInputArgs,
+        "-filter_complex", concatFilter,
+        "-map", "[outv]", "-map", "[outa]",
+        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+        "-c:a", "aac", "-ar", "44100",
+        "-y", "final.mp4"
+      ], "Unione finale (concat filter, senza glitch ai tagli)");
+      await assertNonEmpty(ff, "final.mp4");
+    } catch(err){
+      // fallback solo se il filtro concat stesso fallisce (es. troppe clip
+      // per la memoria disponibile): torniamo al vecchio metodo, meno pulito
+      // ma più leggero.
+      logFinish("Concat con filtro fallita (" + err.message + "), riprovo con il metodo precedente.");
+      const listContent = dubbedNames.map(n => `file '${n}'`).join("\n");
+      await ff.writeFile("concat.txt", new TextEncoder().encode(listContent));
+      await execChecked(ff, ["-f","concat","-safe","0","-i","concat.txt","-c:v","libx264","-preset","ultrafast","-c:a","aac","-y","final.mp4"], "Unione finale (fallback demuxer)");
+    }
+
+    const data = await assertNonEmpty(ff, "final.mp4");
+    // IMPORTANTE: passare la Uint8Array direttamente, non "data.buffer".
+    // data.buffer è l'intero ArrayBuffer interno di ffmpeg.wasm (spesso più
+    // grande e condiviso tra più file), quindi usarlo intero produceva un
+    // blob con dentro anche pezzi di altri file: era questo a far vedere
+    // "un altro video" invece di quello vero al termine del montaggio.
+    const blob = new Blob([data], { type: "video/mp4" });
+    const url = URL.createObjectURL(blob);
+    $("#finalVideo").src = url;
+    $("#btnDownload").href = url;
+    stopLoading();
+    toast("Mega clip pronta!");
+    updateFinishScoreUI();
+    addCreatorStudioClip(blob);
+    onFinalVideoReady(blob, url);
+  } catch (err) {
+    console.error(err);
+    stopLoading();
+    logFinish("Errore durante il montaggio: " + err.message);
+    toast("Qualcosa è andato storto nel montaggio finale: " + err.message);
+  }
+}
+
+function updateFinishScoreUI(){
+  const scores = lines
+    .map(l => l.recording && typeof l.recording.score === "number" ? l.recording.score : null)
+    .filter(s => s !== null);
+  const block = $("#finishScoreBlock");
+  if (!scores.length){
+    block.style.display = "none";
+    return;
+  }
+  const avg = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
+  $("#finishScoreOut").textContent = avg + "/100";
+  block.style.display = "block";
+}
+
+function logFinish(msg){
+  const el = $("#finishLog");
+  el.textContent += msg + "\n";
+  el.scrollTop = el.scrollHeight;
+}
+</script>
+</body>
+</html>

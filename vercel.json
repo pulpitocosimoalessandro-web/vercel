@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    { "source": "/vendor/ffmpeg-ffmpeg/:path*", "destination": "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/:path*" },
+    { "source": "/vendor/ffmpeg-util/:path*", "destination": "https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/:path*" },
+    { "source": "/vendor/ffmpeg-core-a/:path*", "destination": "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm/:path*" },
+    { "source": "/vendor/ffmpeg-core-b/:path*", "destination": "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/:path*" }
+  ],
+  "functions": {
+    "api/modpacks.js": {
+      "maxDuration": 30
+    },
+    "api/turn-credentials.js": {
+      "maxDuration": 10
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "choicer-voicer",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Choicer Voicer — dubbing game",
+  "dependencies": {
+    "@netlify/blobs": "latest"
+  }
+}
