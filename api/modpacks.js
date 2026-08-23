@@ -74,11 +74,21 @@ function setCors(res) {
 // consentito è vincolato al pattern "data-<id>.bin" per evitare che il
 // token venga usato per scrivere in giro nello store.
 async function handleUploadToken(req, res) {
-  // handleUpload si aspetta un oggetto "request" in stile Fetch API (con
-  // request.headers.get(...)); qui siamo in una function Node.js classica
-  // (req/res "vecchio stile"), quindi costruiamo un wrapper minimo attorno
-  // a req.headers, che in Node è un semplice oggetto.
+  // handleUpload si aspetta un oggetto "request" in stile Fetch API, con
+  // request.url, request.method e request.headers.get(...). Qui siamo in
+  // una function Node.js classica (req/res "vecchio stile"): req.url è
+  // SOLO il path (es. "/api/modpacks?action=upload-token"), non l'URL
+  // assoluto. handleUpload usa request.url per costruire il callbackUrl
+  // incorporato nel token firmato: se resta relativo (o manca del tutto),
+  // il token risulta malformato e l'upload vero viene rifiutato con 400
+  // anche se la generazione del token sembra andare a buon fine.
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  const absoluteUrl = `${proto}://${host}${req.url}`;
+
   const requestLike = {
+    url: absoluteUrl,
+    method: req.method,
     headers: { get: (name) => req.headers[String(name).toLowerCase()] },
   };
 
